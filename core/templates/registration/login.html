@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Iniciar sesion{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=5">
+{% endblock %}
+
+{% block content %}
+<div class="inscripcion-page">
+    <section class="hero inscripcion-hero">
+        <div class="card hero__copy inscripcion-copy">
+            <span class="chip">ACCESO A LA PLATAFORMA</span>
+            <h1>Inicia sesion para entrar a tu panel personal</h1>
+            <p class="section-lead" style="margin-bottom: 0;">
+                Accede con tu usuario y contrasena para continuar con tus cursos, revisar tu avance y usar los recursos disponibles.
+            </p>
+        </div>
+        <div class="card inscripcion-shell">
+            <form class="course-form" method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                <div class="form-grid">
+                    <label class="form-field form-field-full" for="{{ form.username.id_for_label }}">
+                        <span class="form-label">Usuario</span>
+                        {{ form.username }}
+                        {{ form.username.errors }}
+                    </label>
+                    <label class="form-field form-field-full" for="{{ form.password.id_for_label }}">
+                        <span class="form-label">Contrasena</span>
+                        {{ form.password }}
+                        {{ form.password.errors }}
+                    </label>
+                </div>
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+                <div class="inscripcion-actions">
+                    <button class="btn-primary" type="submit">Ingresar</button>
+                </div>
+            </form>
+            <div class="auth-switch">
+                <span>No tienes cuenta?</span>
+                <a href="{% url 'student_signup' %}">Registrate aqui</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

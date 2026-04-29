@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% block title %}Activar curso{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:alumnos' %}" class="btn btn-outline page-back-link">&larr; Volver a zona alumnos</a>
+
+<section class="card" style="max-width: 720px; margin: 0 auto;">
+    <h1 style="margin-top:0;">Activar curso teorico</h1>
+    {% if has_exam_access %}
+        <p>
+            Tu acceso ya esta activo{% if profile.activated_course_name %} para <strong>{{ profile.activated_course_name }}</strong>{% endif %}.
+        </p>
+        <div class="exam-summary">
+            <div class="summary-card">
+                <span class="summary-label">Curso</span>
+                <span class="summary-value">{{ profile.activated_course_name|default:"General" }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Vence</span>
+                <span class="summary-value">{{ profile.access_expires_at|date:"d/m/Y" }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Dias restantes</span>
+                <span class="summary-value">{{ access_expires_in_days }}</span>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <a class="btn" href="{% url 'core_web:dashboard' %}">Ir a mi panel</a>
+        </div>
+    {% else %}
+        <p>
+            Ingresa el codigo entregado al momento de tu matricula para habilitar 30 dias de acceso a examenes, progreso y evaluaciones del curso teorico.
+        </p>
+        <form method="post" style="margin-top: 1.25rem;">
+            {% csrf_token %}
+            {% for field in activation_form %}
+                <div style="margin-bottom: 1rem;">
+                    <label for="{{ field.id_for_label }}" style="display:block; font-weight:bold; margin-bottom:0.35rem;">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="meta">{{ field.help_text }}</small>
+                    {% endif %}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+            <button class="btn" type="submit">Activar curso</button>
+        </form>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Panel de Pruebas{% endblock %}
+
+{% block content %}
+<article class="card" style="margin-bottom: 2rem; background: #1f4b42; color: #fff; border: none;">
+    <h1 style="color:#fff;">Panel del alumno</h1>
+    <p style="max-width: 680px; color: #f4efe3; margin-bottom: 0;">
+        Hola {{ student.first_name|default:student.username }}, desde aqui puedes rendir tus examenes, reanudar intentos y revisar tu historial personal.
+        {% if profile %}
+            Tu rol actual es <strong>{{ profile.get_role_display }}</strong>.
+        {% endif %}
+    </p>
+    <div class="meta" style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(227,242,253,0.9); color: #0d47a1;">
+            Promedio de puntaje: {% if average_score is not None %}{{ average_score|floatformat:1 }}%{% else %}&mdash;{% endif %}
+        </span>
+        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(237,231,246,0.9); color: #4527a0;">
+            Intentos realizados: {{ total_attempts }}
+        </span>
+        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(232,245,233,0.9); color: #1b5e20;">
+            Aprobados (&gt;= 85%): {{ approved_attempts }}
+        </span>
+        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(255,235,238,0.9); color: #c62828;">
+            Reprobados (&lt; 85%): {{ failed_attempts }}
+        </span>
+        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(224,247,250,0.9); color: #006064;">
+            Horas en plataforma: {{ platform_hours_sum }}
+        </span>
+    </div>
+</article>
+
+{% if user.is_staff %}
+<section class="dashboard-section">
+    <article class="card">
+        <h2 style="margin-top: 0;">Gestion interna</h2>
+        <p style="max-width: 720px;">
+            Accede a la bandeja comercial para revisar inscripciones pendientes, cambiar su estado y generar codigos de activacion Clase B desde la misma plataforma.
+        </p>
+        <div style="margin-top: 1rem;">
+            <a class="btn" href="{% url 'core_web:manage-inscripciones' %}">Abrir inscripciones pendientes</a>
+        </div>
+    </article>
+</section>
+{% endif %}
+
+<section class="dashboard-section">
+    <article class="card {% if has_exam_access %}highlight-card{% endif %}">
+        <h2 style="margin-top: 0;">Estado de acceso</h2>
+        {% if has_exam_access %}
+            <p>
+                Tu curso esta activo{% if profile.activated_course_name %} para <strong>{{ profile.activated_course_name }}</strong>{% endif %}.
+                {% if profile.access_expires_at %}Tu acceso vence el {{ profile.access_expires_at|date:"d/m/Y" }}.{% endif %}
+            </p>
+            <div class="exam-summary">
+                <div class="summary-card">
+                    <span class="summary-label">Curso activo</span>
+                    <span class="summary-value">{{ profile.activated_course_name|default:"General" }}</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Vence</span>
+                    <span class="summary-value">{{ profile.access_expires_at|date:"d/m/Y" }}</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Dias restantes</span>
+                    <span class="summary-value">{{ access_expires_in_days }}</span>
+                </div>
+            </div>
+        {% else %}
+            <p>
+                Tu cuenta esta creada, pero todavia no tienes acceso activo a los examenes.
+                Ingresa el codigo entregado al momento de tu inscripcion para habilitar 30 dias de curso teorico.
+            </p>
+            <form method="post" style="max-width: 460px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="activate">
+                {% for field in activation_form %}
+                    <div style="margin-bottom: 1rem;">
+                        <label for="{{ field.id_for_label }}" style="display:block; font-weight:bold; margin-bottom:0.35rem;">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <button class="btn" type="submit">Activar curso</button>
+            </form>
+        {% endif %}
+    </article>
+</section>
+
+{% if has_exam_access and active_attempt %}
+<section class="dashboard-section">
+    <article class="card highlight-card">
+        <h2 style="margin-top: 0;">Examen en curso</h2>
+        <p style="margin-bottom: 0.8rem;">
+            Tienes un intento activo de <strong>{{ active_attempt.template.name }}</strong>. Puedes retomarlo donde quedaste.
+        </p>
+        <div class="exam-summary">
+            <div class="summary-card">
+                <span class="summary-label">Inicio</span>
+                <span class="summary-value">{{ active_attempt.started_at|date:"d/m H:i" }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Estado</span>
+                <span class="summary-value">En curso</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Tiempo restante</span>
+                <span class="summary-value">
+                    {% if active_attempt_remaining_minutes is not None %}
+                        {{ active_attempt_remaining_minutes }} min
+                    {% else %}
+                        Sin limite
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div style="margin-top: 1.25rem;">
+            <a class="btn" href="{% url 'core_web:attempt-detail' active_attempt.pk %}">Reanudar examen</a>
+        </div>
+    </article>
+</section>
+{% endif %}
+
+{% if has_exam_access %}
+<section class="dashboard-section">
+    <div class="section-heading">
+        <span class="section-kicker">Plantillas disponibles</span>
+       
+    </div>
+    {% if templates %}
+        <div class="exam-template-list">
+            {% for template in templates %}
+                <article class="card exam-template-card">
+                    <div class="exam-template-main">
+                        <div>
+                            <span class="tag exam-template-tag">Evaluacion teorica</span>
+                            <h3>{{ template.name }}</h3>
+                        </div>
+                        <div class="exam-template-stats">
+                            <div class="exam-template-stat">
+                                <span>Preguntas</span>
+                                <strong>{{ template.total_questions }}</strong>
+                            </div>
+                            <div class="exam-template-stat">
+                                <span>Duracion</span>
+                                <strong>{{ template.duration_minutes }} min</strong>
+                            </div>
+                            <div class="exam-template-stat">
+                                <span>Feedback</span>
+                                <strong>{% if template.show_feedback %}Activado{% else %}No{% endif %}</strong>
+                            </div>
+                        </div>
+                        {% if template.active_attempt %}
+                            <div class="exam-template-actions">
+                                <a class="btn" href="{% url 'core_web:attempt-detail' template.active_attempt.pk %}">Reanudar intento</a>
+                            </div>
+                        {% else %}
+                            <form class="exam-template-actions" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="template_id" value="{{ template.id }}">
+                                <button class="btn" type="submit">Iniciar examen</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% if template.rules_json %}
+                        <div style="margin-top: 1rem; font-size: 0.9rem;">
+                            <strong>Reglas:</strong>
+                            <pre style="background:#f8fafc; padding:0.8rem; border-radius:8px; white-space:pre-wrap;">{{ template.rules_json }}</pre>
+                        </div>
+                    {% endif %}
+                    {% if template.active_attempt %}
+                        <div class="exam-alert info" style="margin-top: 1.25rem;">
+                            Ya tienes un intento en curso para esta plantilla.
+                        </div>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No hay plantillas cargadas todavia.</p>
+    {% endif %}
+</section>
+
+<section class="dashboard-section">
+    <h2 style="margin-bottom: 1rem;">
+        <span class="pill" style="font-size: 1rem; padding: 0.45rem 0.9rem; background: #fff3cd; color: #8a6d3b;">Historial de intentos</span>
+    </h2>
+    {% if history_attempts %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Plantilla</th>
+                        <th>Estado</th>
+                        <th>Inicio</th>
+                        <th>Finalizo</th>
+                        <th>Puntaje</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in history_attempts %}
+                        <tr>
+                            <td>{{ attempt.template.name }}</td>
+                            <td>
+                                {% if attempt.status == 'ENTREGADO' %}
+                                    <span class="status-pill completed">Entregado</span>
+                                {% elif attempt.status == 'EXPIRADO' %}
+                                    <span class="status-pill expired">Expirado</span>
+                                {% else %}
+                                    <span class="status-pill in-progress">En curso</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if attempt.finished_at %}
+                                    {{ attempt.finished_at|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attempt.score is not None %}
+                                    {{ attempt.score }}%
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
+                                    Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay intentos anteriores para mostrar.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

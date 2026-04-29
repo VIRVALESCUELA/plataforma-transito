@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Inscripcion de cursos{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=3">
+{% endblock %}
+
+{% block content %}
+<div class="inscripcion-page">
+<section class="hero inscripcion-hero">
+    <div class="card hero__copy inscripcion-copy">
+        <span class="chip">RESERVA TU CURSO...</span>
+        <h1>Completa tus datos, un asesor te contactara a la brevedad</h1>
+        <p class="section-lead" style="margin-bottom: 0;">
+            Elige el curso que te interesa y completa el formulario con tranquilidad. Te contactaremos con la informacion de disponibilidad, pago y pasos siguientes.
+        </p>
+    </div>
+    <div class="card inscripcion-shell">
+        {% include "core/includes/inscripcion_form.html" with form=form %}
+    </div>
+</section>
+</div>
+{% endblock %}

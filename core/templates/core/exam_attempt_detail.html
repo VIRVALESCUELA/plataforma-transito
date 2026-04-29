@@ -1,0 +1,209 @@
+{% extends "core/base.html" %}
+{% block title %}Detalle del Examen{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+
+<section class="card" style="margin-bottom: 2rem;">
+    <h1 style="margin-top:0;">{{ attempt.template.name }}</h1>
+    <p class="meta" style="color: #455a64;">
+        Inicio: {{ attempt.started_at|date:"d/m/Y H:i" }}<br>
+        Duracion: {{ attempt.template.duration_minutes }} minutos<br>
+        Preguntas: {{ attempt.template.total_questions }}
+        {% if can_answer and remaining_minutes is not None %}<br>
+        Tiempo restante: {{ remaining_minutes }} minuto{{ remaining_minutes|pluralize:"s" }}
+        {% endif %}
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+        <div>
+            {% if attempt.status == 'ENTREGADO' %}
+                <span class="status-pill completed">Entregado</span>
+            {% elif attempt.status == 'EXPIRADO' %}
+                <span class="status-pill expired">Expirado</span>
+            {% else %}
+                <span class="status-pill in-progress">En curso</span>
+            {% endif %}
+        </div>
+        <div>
+            <strong>Puntaje:</strong>
+            {% if attempt.score is not None %}
+                {{ attempt.score }}%
+            {% else %}
+                &mdash;
+            {% endif %}
+        </div>
+    </div>
+    <p class="meta" style="margin-top:1rem; color: #455a64;">
+        Progreso: {{ answered_count }}/{{ total_questions }} preguntas respondidas.
+        {% if can_answer and not all_answered %}
+            &mdash; Aun quedan preguntas sin responder.
+            {% if remaining_minutes is not None and remaining_minutes <= 10 %}
+                Quedan {{ remaining_minutes }} minuto{{ remaining_minutes|pluralize:"s" }} antes de que expire.
+            {% endif %}
+        {% elif not can_answer %}
+            &mdash; El examen ya no admite cambios.
+        {% endif %}
+    </p>
+    <div class="exam-summary">
+        <div class="summary-card">
+            <span class="summary-label">Avance</span>
+            <span class="summary-value">{{ progress_percent }}%</span>
+            <div class="progress-bar" aria-hidden="true">
+                <div class="progress-bar-fill" style="width: {{ progress_percent }}%;"></div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Respondidas</span>
+            <span class="summary-value">{{ answered_count }}</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Pendientes</span>
+            <span class="summary-value">{{ unanswered_count }}</span>
+        </div>
+    </div>
+    {% if can_answer %}
+        <div class="exam-alert {% if remaining_minutes is not None and remaining_minutes <= 10 %}warning{% else %}info{% endif %}">
+            {% if all_answered %}
+                Ya completaste todas las preguntas. Puedes guardar una ultima vez o finalizar para obtener tu puntaje.
+            {% elif remaining_minutes is not None and remaining_minutes <= 10 %}
+                Estas en la recta final. Revisa las preguntas pendientes antes de finalizar.
+            {% else %}
+                Guarda tus respuestas si necesitas salir y vuelve luego para continuar.
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+
+<section>
+    <article class="card" style="margin-bottom: 1.5rem;">
+        <h2 style="margin-bottom:1rem;">
+            <span class="pill" style="font-size: 1rem; padding: 0.45rem 0.9rem; background: #e3f2fd; color: #0d47a1;">
+                Preguntas
+            </span>
+        </h2>
+        {% if can_answer %}
+            <p class="meta" style="margin:0;">
+                <span class="pill" style="padding: 0.4rem 0.8rem; background: #ede7f6; color: #4527a0;">
+                    Selecciona todas las opciones correctas por pregunta. Puedes guardar para continuar mas tarde o finalizar cuando termines.
+                </span>
+            </p>
+        {% elif show_feedback %}
+            <p class="meta" style="margin:0;">
+                <span class="pill" style="padding: 0.4rem 0.8rem; background: #fce8e6; color: #b71c1c;">
+                    El examen esta cerrado. Se muestran tus respuestas y las correctas para referencia.
+                </span>
+            </p>
+        {% endif %}
+    </article>
+
+    <form method="post" class="exam-form">
+        {% if can_answer %}
+            {% csrf_token %}
+        {% endif %}
+
+        {% if question_entries %}
+            {% for entry in question_entries %}
+                {% with question=entry.question answer=entry.answer selected=entry.selected_indexes correct=entry.correct_indexes %}
+                    <article class="question">
+                        <header class="question-header">
+                            <h3 style="margin:0;">Pregunta {{ entry.number }}</h3>
+                            <div class="meta">
+                                {% if question.topic %}
+                                    <span class="pill">Tema: {{ question.topic }}</span>
+                                {% endif %}
+                                <span class="pill">Dificultad: {{ question.difficulty }}</span>
+                                {% if selected %}
+                                    <span class="pill" style="background: #e8f5e9; color: #1b5e20;">Respondida</span>
+                                {% elif can_answer %}
+                                    <span class="pill" style="background: #fff8e1; color: #8d6e00;">Pendiente</span>
+                                {% endif %}
+                            </div>
+                        </header>
+                        <p style="margin:1rem 0;">{{ question.question_text }}</p>
+                        {% if question.image %}
+                            <div class="question-media" style="margin:1rem 0;">
+                                <img src="{{ question.image.url }}" alt="Ilustracion de la pregunta {{ entry.number }}" style="max-height:220px; width:auto; border-radius:6px;">
+                            </div>
+                        {% endif %}
+                        <ul class="options">
+                            {% for option in question.options %}
+                                {% with idx=forloop.counter0 %}
+                                    <li class="option{% if selected and idx in selected %} selected{% endif %}{% if show_feedback and idx in correct %} correct{% endif %}{% if show_feedback and selected and idx in selected and idx not in correct %} incorrect{% endif %}">
+                                        <label class="question-option-label">
+                                            <input type="checkbox"
+                                                   name="answers-{{ question.id }}"
+                                                   value="{{ idx }}"
+                                                   {% if selected and idx in selected %}checked{% endif %}
+                                                   {% if not can_answer %}disabled{% endif %}>
+                                            <span>{{ option.text }}</span>
+                                        </label>
+                                    </li>
+                                {% endwith %}
+                            {% endfor %}
+                        </ul>
+                        {% if show_feedback and answer %}
+                            <div class="feedback">
+                                {% if answer.is_correct %}
+                                    <strong>Buen trabajo. Respuesta correcta.</strong>
+                                {% else %}
+                                    <strong>Revisa tus respuestas.</strong>
+                                {% endif %}
+                                {% if entry.correct_texts %}
+                                    <p style="margin:0.6rem 0 0 0;">
+                                        <strong>Correctas:</strong> {{ entry.correct_texts|join:", " }}
+                                    </p>
+                                {% endif %}
+                                {% if entry.selected_texts %}
+                                    <p class="meta" style="margin-top:0.4rem;">
+                                        <strong>Tus respuestas:</strong> {{ entry.selected_texts|join:", " }}
+                                    </p>
+                                {% endif %}
+                                {% if question.explanation %}
+                                    <p style="margin:0.8rem 0 0 0;">{{ question.explanation }}</p>
+                                {% endif %}
+                                {% if question.reference_law or question.reference_book %}
+                                    <p class="meta" style="margin-top:0.5rem;">
+                                        {% if question.reference_law %}Ley: {{ question.reference_law }}{% endif %}
+                                        {% if question.reference_book %} &mdash; Referencia: {{ question.reference_book }}{% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </article>
+                {% endwith %}
+            {% endfor %}
+        {% else %}
+            <p>Este intento todavia no tiene preguntas generadas.</p>
+        {% endif %}
+
+        {% if can_answer and question_entries %}
+            <div class="form-actions">
+                <div class="meta">
+                    Preguntas respondidas: {{ answered_count }}/{{ total_questions }}
+                    {% if unanswered_count %}
+                        &mdash; Pendientes: {{ unanswered_count }}
+                    {% else %}
+                        &mdash; Todo listo para finalizar.
+                    {% endif %}
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-outline" type="submit" name="action" value="save">Guardar progreso</button>
+                    <button class="btn" type="submit" name="action" value="finish" onclick="return confirm('Se calificara el examen y ya no podras cambiar respuestas. ¿Deseas continuar?');">Finalizar y calificar</button>
+                </div>
+            </div>
+            <div class="exam-mobile-actions">
+                <div class="meta">
+                    {{ answered_count }}/{{ total_questions }} respondidas
+                    {% if unanswered_count %}
+                        · {{ unanswered_count }} pendientes
+                    {% else %}
+                        · listo para finalizar
+                    {% endif %}
+                </div>
+                <button class="btn btn-outline" type="submit" name="action" value="save">Guardar progreso</button>
+                <button class="btn" type="submit" name="action" value="finish" onclick="return confirm('Se calificara el examen y ya no podras cambiar respuestas. ¿Deseas continuar?');">Finalizar y calificar</button>
+            </div>
+        {% endif %}
+    </form>
+</section>
+{% endblock %}

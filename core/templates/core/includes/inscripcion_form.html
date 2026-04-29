@@ -1,0 +1,38 @@
+<form class="course-form" method="post" action="{% url 'core_web:inscripcion' %}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="form-errors">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+    <div class="form-grid">
+        <label class="form-field">
+            <span class="form-label">Nombre completo</span>
+            {{ form.nombre }}
+            {{ form.nombre.errors }}
+        </label>
+        <label class="form-field">
+            <span class="form-label">Comuna</span>
+            {{ form.comuna }}
+            {{ form.comuna.errors }}
+        </label>
+        <label class="form-field">
+            <span class="form-label">Correo</span>
+            {{ form.correo }}
+            {{ form.correo.errors }}
+        </label>
+        <label class="form-field">
+            <span class="form-label">Numero de telefono</span>
+            {{ form.telefono }}
+            {{ form.telefono.errors }}
+        </label>
+        <label class="form-field form-field-full">
+            <span class="form-label">Curso</span>
+            {{ form.curso }}
+            {{ form.curso.errors }}
+        </label>
+    </div>
+    <div class="inscripcion-actions">
+        <button type="submit" class="btn-primary">Enviar solicitud</button>
+    </div>
+</form>

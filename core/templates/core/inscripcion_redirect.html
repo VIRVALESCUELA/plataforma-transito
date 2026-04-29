@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Redirigiendo a WhatsApp{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 720px; margin: 0 auto; text-align:center;">
+    <h1>Enviando tu solicitud...</h1>
+    <p>Deber&iacute;a abrirse WhatsApp en otra pesta&ntilde;a con tu mensaje listo para pegar.</p>
+    <p style="margin-top:1rem;">
+        Si no se abre autom&aacute;ticamente, <a id="wsp-link" href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer">haz clic aqu&iacute;</a>.
+    </p>
+    <p style="margin-top:1rem;">
+        <a class="btn" href="{{ home_url }}">Volver al inicio</a>
+    </p>
+</section>
+<script>
+    (function() {
+        var link = document.getElementById("wsp-link");
+        if (link) {
+            // Intenta abrir en nueva pestaña sin bloquear el flujo
+            var a = document.createElement("a");
+            a.href = link.href;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.style.display = "none";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { a.remove(); }, 500);
+        }
+    })();
+</script>
+{% endblock %}

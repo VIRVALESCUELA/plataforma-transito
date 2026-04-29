@@ -1,0 +1,184 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Virval - Blog y material{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="card" style="background: linear-gradient(120deg, rgba(18,53,44,0.8), rgba(31,94,82,0.75)), url('{% static 'core/ENPRACTICA.png' %}') center/cover; color: #fff; border: none;">
+    <p class="chip" style="background: rgba(255,255,255,0.25); color:#fff;">Recursos abiertos</p>
+    <h1 style="color:#fff;">Blog, Tips de conducción y material descargable</h1>
+    <p style="color:#f4efe3;">Consulta tips de conduccion defensiva, repasa normativa y accede a videos explicativos
+        preparados por nuestros instructores certificados.</p>
+</section>
+
+<section style="margin-top:3rem;">
+    <h2 class="chip">TIPS DE CONDUCCION</h2>
+    <div class="media-grid">
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/ADELANTAMIENTO.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/ADELANTAMIENTO.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Adelantamiento</h3>
+            <p>Claves para adelantar con visibilidad, distancia y seguridad.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/CAMBIODESENTIDO.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/CAMBIODESENTIDO.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Cambio de sentido</h3>
+            <p>Cómo realizar un cambio de sentido de forma correcta y segura.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/INCORPTRANSITO.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/INCORPTRANSITO.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Incorporación al tránsito</h3>
+            <p>Aprende a incorporarte al tránsito respetando tiempos y prioridades.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/CONDUCIENDO.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/CONDUCIENDO.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Conducción segura</h3>
+            <p>Buenas prácticas para conducir con control, anticipación y fluidez.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/CAMBIODEPISTA.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/CAMBIODEPISTA.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Cambio de pista</h3>
+            <p>Señalización, observación y maniobra correcta al cambiar de pista.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/INTERSECCION.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/INTERSECCION.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Intersección</h3>
+            <p>Prioridades de paso y precauciones al enfrentar una intersección.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/TUNEL.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/TUNEL.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Túnel</h3>
+            <p>Recomendaciones para circular con seguridad dentro de un túnel.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/MARCHATRAS.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/MARCHATRAS.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Marcha atrás</h3>
+            <p>Técnicas básicas para retroceder con control y buena visibilidad.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/ROTONDA.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/ROTONDA.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Rotonda</h3>
+            <p>Cómo entrar, circular y salir correctamente de una rotonda.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/NOCHE.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/NOCHE.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Conducción nocturna</h3>
+            <p>Cuidados esenciales para conducir de noche con menor visibilidad.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/CRUCE.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/CRUCE.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Cruce</h3>
+            <p>Atención y técnica para resolver cruces de manera segura.</p>
+        </article>
+        <article class="card media-card">
+            <video controls preload="metadata" poster="{% static 'core/tipsvideos/posters/MALTIEMPO.jpg' %}">
+                <source src="{% static 'core/tipsvideos/optimized/MALTIEMPO.mp4' %}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <h3>Mal tiempo</h3>
+            <p>Recomendaciones para conducir con lluvia, poca adherencia y baja visibilidad.</p>
+        </article>
+    </div>
+</section>
+
+<section style="margin:3rem 0;">
+    <h2 class="chip">LIBRO DEL NUEVO CONDUCTOR DESCARGABLE</h2>
+    <div class="resource-grid">
+        <article class="card resource-card">
+            <h3>Capitulo 1</h3>
+            <p>Los siniestros del tránsito.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-1.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 2</h3>
+            <p>Los principios de la conducción.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-2.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 3</h3>
+            <p>Convivencia víal.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-3.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 4</h3>
+            <p>La persona en el tránsito.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-4.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 5</h3>
+            <p>La y los usuarios vulnerable.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-5.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 6</h3>
+            <p>Normas de circulación.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-6.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 7</h3>
+            <p>Conduccion en circunstancias especiales.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-7.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 8</h3>
+            <p>Conducción eficiente.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-8.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Capitulo 9</h3>
+            <p>Informaciones importantes.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/capitulo-9.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Glosario</h3>
+            <p>Terminologia víal.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/glosario.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Señales</h3>
+            <p>Señales de transito.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/senales.pdf' %}" download role="button">Descargar</a>
+        </article>
+        <article class="card resource-card">
+            <h3>Disposiciones</h3>
+            <p>Aplicable a vehículos.</p>
+            <a class="btn-ghost" href="{% static 'core/materiales/disposiciones-vehículos.pdf' %}" download role="button">Descargar</a>
+        </article>
+    </div>
+</section>
+{% endblock %}

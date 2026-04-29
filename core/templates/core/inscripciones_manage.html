@@ -1,0 +1,94 @@
+{% extends "core/base.html" %}
+{% block title %}Inscripciones pendientes{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+
+<section class="card">
+    <h1 style="margin-top:0;">Inscripciones y codigos Clase B</h1>
+    <p style="max-width: 760px;">
+        Desde aqui puedes revisar interesados, marcar su estado comercial y generar codigos de activacion para alumnos matriculados.
+    </p>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <div class="exam-summary">
+        {% for card in summary_cards %}
+            <div class="summary-card">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="pill" style="margin-top: 0.85rem; {{ card.tone }}">
+                    Actualizado al momento
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    {% if inscripciones %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Nombre</th>
+                        <th>Curso</th>
+                        <th>Contacto</th>
+                        <th>Estado</th>
+                        <th>Codigo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inscripcion in inscripciones %}
+                        <tr>
+                            <td>{{ inscripcion.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ inscripcion.nombre }}</td>
+                            <td>{{ inscripcion.curso|default:"Sin definir" }}</td>
+                            <td>
+                                {{ inscripcion.correo }}<br>
+                                <span class="meta" style="color:#455a64;">{{ inscripcion.telefono }}</span>
+                            </td>
+                            <td>
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="inscripcion_id" value="{{ inscripcion.id }}">
+                                    <select name="status" onchange="this.form.submit()" style="min-width: 150px;">
+                                        {% for value, label in inscripcion.Status.choices %}
+                                            <option value="{{ value }}"{% if inscripcion.status == value %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            <td>
+                                {% if inscripcion.activation_code %}
+                                    <strong>{{ inscripcion.activation_code.code }}</strong><br>
+                                    <span class="meta" style="color:#455a64;">{{ inscripcion.activation_code.course_name }}</span>
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inscripcion.activation_code %}
+                                    <span class="pill">Codigo generado</span>
+                                {% else %}
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="generate_code">
+                                        <input type="hidden" name="inscripcion_id" value="{{ inscripcion.id }}">
+                                        <button class="btn" type="submit">Generar codigo Clase B</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay inscripciones registradas todavia.</p>
+    {% endif %}
+</section>
+{% endblock %}

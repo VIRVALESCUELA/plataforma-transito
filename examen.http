@@ -1,0 +1,29 @@
+### Variables
+@base = http://127.0.0.1:8000
+@template_id = 3
+
+### 1) Iniciar examen
+# Devuelve attempt.id y la lista de preguntas
+# Guarda el id en @attempt_id automaticamente
+# @name start
+POST {{base}}/api/exams/start/
+Content-Type: application/json
+
+{
+  "template_id": {{template_id}}
+}
+
+@attempt_id = {{start.response.body.$.id}}
+@first_question_id = {{start.response.body.$.exam_questions[0].id}}
+
+### 2) Responder PRIMERA pregunta
+POST {{base}}/api/exams/{{attempt_id}}/answer/
+Content-Type: application/json
+
+{
+  "exam_question_id": {{first_question_id}},
+  "selected_index": 0
+}
+
+### 3) Finalizar examen
+POST {{base}}/api/exams/{{attempt_id}}/finish/

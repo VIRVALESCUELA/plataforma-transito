@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Crear cuenta{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=8">
+{% endblock %}
+
+{% block content %}
+<div class="inscripcion-page signup-page">
+    <section class="hero inscripcion-hero signup-hero">
+        <div class="card hero__copy inscripcion-copy">
+            <span class="chip">CREA TU CUENTA</span>
+            <h1>Regístrate y accede.
+                Practica exámenes actualizados, sigue tu avance y estudia el Feedback.
+                Prepárate y aprueba tu examen teórico.
+            </h1>
+            <p class="section-lead" style="margin-bottom: 0;">
+                Crea tu usuario con una clave simple y, una vez dentro, podras activar tu curso con el codigo entregado al momento de tu matricula.
+            </p>
+            <div class="signup-copy-media">
+                <img src="{% static 'core/exa.png' %}" alt="Escuela de conductores Virval">
+            </div>
+        </div>
+        <div class="card inscripcion-shell signup-shell">
+            <form class="course-form signup-form" method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                <div class="form-grid signup-form-grid">
+                    {% for field in form %}
+                        <label class="form-field form-field-full">
+                            <span class="form-label">{{ field.label }}</span>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="meta">{{ field.help_text }}</small>
+                            {% endif %}
+                            {{ field.errors }}
+                        </label>
+                    {% endfor %}
+                </div>
+                <div class="inscripcion-actions">
+                    <button class="btn-primary" type="submit">Crear cuenta</button>
+                </div>
+            </form>
+            <div class="auth-switch">
+                <span>Ya tienes una cuenta?</span>
+                <a href="{% url 'login' %}">Inicia sesion</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
