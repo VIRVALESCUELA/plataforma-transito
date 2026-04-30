@@ -2,9 +2,10 @@ import csv
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.core.management.color import no_style
+from django.db import connection, transaction
 
-from core.models import Option, Question, Topic
+from core.models import ExamTemplate, Option, Question, Topic
 
 
 def parse_yes_no(value):
@@ -17,13 +18,26 @@ def parse_yes_no(value):
 
 
 class Command(BaseCommand):
-    help = "Importa actualizaciones del banco de preguntas desde un CSV exportado."
+    help = "Importa o actualiza el banco de preguntas desde un CSV exportado."
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--input",
-            required=True,
+            default="exports/question_bank_export.csv",
             help="Ruta del archivo CSV editado.",
+        )
+        parser.add_argument(
+            "--preserve-ids",
+            action="store_true",
+            help=(
+                "Crea preguntas nuevas usando el question_id del CSV cuando este "
+                "disponible. Util para restaurar una base vacia desde el export."
+            ),
+        )
+        parser.add_argument(
+            "--ensure-template",
+            action="store_true",
+            help="Crea o actualiza la plantilla base Examen clase B.",
         )
 
     @transaction.atomic
@@ -41,24 +55,35 @@ class Command(BaseCommand):
         updated_options = 0
         created_options = 0
 
-        for row in rows:
+        for row_number, row in enumerate(rows, start=2):
             question_id = (row.get("question_id") or "").strip()
-            creating_question = not question_id
+            question_text = (row.get("question_text") or "").strip()
 
+            question = None
+            if question_id:
+                try:
+                    question = (
+                        Question.objects.select_related("topic")
+                        .prefetch_related("options")
+                        .get(pk=int(question_id))
+                    )
+                except (TypeError, ValueError) as exc:
+                    raise CommandError(
+                        f"Fila {row_number}: question_id invalido: {question_id!r}."
+                    ) from exc
+                except Question.DoesNotExist:
+                    question = None
+
+            creating_question = question is None
             if creating_question:
-                question_text = (row.get("question_text") or "").strip()
                 if not question_text:
                     raise CommandError(
-                        "Las filas nuevas deben incluir question_text."
+                        f"Fila {row_number}: las preguntas nuevas deben incluir question_text."
                     )
-                question = Question()
-            else:
-                try:
-                    question = Question.objects.select_related("topic").prefetch_related("options").get(
-                        pk=int(question_id)
-                    )
-                except Question.DoesNotExist as exc:
-                    raise CommandError(f"No existe la pregunta con id {question_id}.") from exc
+                if question_id and options["preserve_ids"]:
+                    question = Question(pk=int(question_id))
+                else:
+                    question = Question()
 
             topic_name = (row.get("topic") or "").strip()
             if topic_name:
@@ -71,6 +96,10 @@ class Command(BaseCommand):
             question.reference_law = row.get("reference_law", question.reference_law)
             question.reference_book = row.get("reference_book", question.reference_book)
             question.explanation = row.get("feedback", question.explanation)
+
+            image_name = (row.get("image") or "").strip()
+            if image_name:
+                question.image = image_name
 
             difficulty = (row.get("difficulty") or "").strip()
             if difficulty:
@@ -86,7 +115,7 @@ class Command(BaseCommand):
             else:
                 updated_questions += 1
 
-            options = list(question.options.all().order_by("id"))
+            existing_options = list(question.options.all().order_by("id"))
             option_index = 1
             while True:
                 option_text_key = f"option_{option_index}_text"
@@ -99,8 +128,8 @@ class Command(BaseCommand):
                 has_text = option_text not in {None, ""}
                 has_correct = option_correct not in {None, ""}
 
-                if option_index <= len(options):
-                    option = options[option_index - 1]
+                if option_index <= len(existing_options):
+                    option = existing_options[option_index - 1]
                     changed = False
                     if has_text:
                         option.text = option_text
@@ -137,6 +166,24 @@ class Command(BaseCommand):
                     f"La pregunta {question.pk} debe tener al menos una opcion correcta."
                 )
 
+        if options["ensure_template"]:
+            ExamTemplate.objects.update_or_create(
+                name="Examen clase B",
+                defaults={
+                    "duration_minutes": 45,
+                    "total_questions": 35,
+                    "rules_json": {},
+                    "show_feedback": True,
+                },
+            )
+
+        if options["preserve_ids"]:
+            sequence_sql = connection.ops.sequence_reset_sql(no_style(), [Question])
+            if sequence_sql:
+                with connection.cursor() as cursor:
+                    for sql in sequence_sql:
+                        cursor.execute(sql)
+
         self.stdout.write(
             self.style.SUCCESS(
                 "Importacion completada: "
@@ -146,3 +193,9 @@ class Command(BaseCommand):
                 f"{created_options} opciones creadas desde {input_path}"
             )
         )
+        if options["ensure_template"]:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Plantilla asegurada: Examen clase B, 35 preguntas, 45 minutos."
+                )
+            )

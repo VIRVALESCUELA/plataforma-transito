@@ -549,6 +549,101 @@ class ExportQuestionBankCommandTests(TestCase):
         self.assertEqual(options[1].text, "Desacoplar motor y transmisión")
         self.assertTrue(options[1].is_correct)
 
+    def test_import_creates_question_when_csv_id_does_not_exist(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = f"{tmpdir}/preguntas_restauradas.csv"
+            with open(input_path, "w", newline="", encoding="utf-8-sig") as csvfile:
+                writer = csv.DictWriter(
+                    csvfile,
+                    fieldnames=[
+                        "question_id",
+                        "topic",
+                        "difficulty",
+                        "is_active",
+                        "question_text",
+                        "reference_law",
+                        "reference_book",
+                        "feedback",
+                        "image",
+                        "option_1_text",
+                        "option_1_is_correct",
+                        "option_2_text",
+                        "option_2_is_correct",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "question_id": "999",
+                        "topic": "Señales",
+                        "difficulty": 1,
+                        "is_active": "si",
+                        "question_text": "¿Qué significa esta señal preventiva?",
+                        "reference_law": "",
+                        "reference_book": "Capítulo 4",
+                        "feedback": "Advierte una condición de riesgo en la vía.",
+                        "image": "questions/p-123.png",
+                        "option_1_text": "Peligro",
+                        "option_1_is_correct": "si",
+                        "option_2_text": "Estacionamiento permitido",
+                        "option_2_is_correct": "no",
+                    }
+                )
+
+            call_command("import_question_bank_updates", input=input_path)
+
+        question = Question.objects.get(text="¿Qué significa esta señal preventiva?")
+        self.assertNotEqual(question.pk, 999)
+        self.assertEqual(question.image.name, "questions/p-123.png")
+        self.assertEqual(question.options.count(), 2)
+
+    def test_bootstrap_exam_data_imports_questions_and_template(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = f"{tmpdir}/bootstrap.csv"
+            with open(input_path, "w", newline="", encoding="utf-8-sig") as csvfile:
+                writer = csv.DictWriter(
+                    csvfile,
+                    fieldnames=[
+                        "question_id",
+                        "topic",
+                        "difficulty",
+                        "is_active",
+                        "question_text",
+                        "reference_law",
+                        "reference_book",
+                        "feedback",
+                        "option_1_text",
+                        "option_1_is_correct",
+                        "option_2_text",
+                        "option_2_is_correct",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "question_id": "",
+                        "topic": "Normativa",
+                        "difficulty": 1,
+                        "is_active": "si",
+                        "question_text": "Pregunta para bootstrap",
+                        "reference_law": "",
+                        "reference_book": "",
+                        "feedback": "Retroalimentacion",
+                        "option_1_text": "Correcta",
+                        "option_1_is_correct": "si",
+                        "option_2_text": "Incorrecta",
+                        "option_2_is_correct": "no",
+                    }
+                )
+
+            call_command("bootstrap_exam_data", input=input_path)
+
+        template = ExamTemplate.objects.get(name="Examen clase B")
+        self.assertEqual(template.total_questions, 35)
+        self.assertEqual(template.duration_minutes, 45)
+        self.assertTrue(template.show_feedback)
+        self.assertTrue(Question.objects.filter(text="Pregunta para bootstrap").exists())
+
 
 class ActivationCodeGeneratorCommandTests(TestCase):
     def test_generates_activation_codes_and_exports_csv(self):
