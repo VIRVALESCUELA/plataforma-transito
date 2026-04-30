@@ -72,12 +72,7 @@ class InscripcionCreateView(FormView):
             f"Curso: {curso}"
         )
         whatsapp_url = f"https://wa.me/{whatsapp_number}?text={quote(message)}"
-        # Abrimos WhatsApp en nueva pestaña y volvemos al home con el form limpio.
-        return render(
-            self.request,
-            "core/inscripcion_redirect.html",
-            {"whatsapp_url": whatsapp_url, "home_url": reverse_lazy("core_web:landing")},
-        )
+        return redirect(whatsapp_url)
 
     def form_invalid(self, form):
         messages.error(self.request, "Revisa los datos ingresados e intenta nuevamente.")

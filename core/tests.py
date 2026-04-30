@@ -59,8 +59,8 @@ class InscripcionTests(TestCase):
             "curso": "Curso base mecanico",
         }
         response = self.client.post(reverse("core_web:inscripcion"), payload)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("wa.me", response.content.decode())
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("wa.me", response.headers["Location"])
         self.assertTrue(
             Inscripcion.objects.filter(nombre="Test Alumno", correo="test@example.com").exists()
         )
