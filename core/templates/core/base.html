@@ -62,6 +62,50 @@
             gap: 1rem;
             flex-wrap: wrap;
         }
+        .mobile-menu-toggle {
+            display: none;
+            position: relative;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            margin-left: auto;
+            border: 2px solid rgba(255,255,255,0.45);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            cursor: pointer;
+        }
+        .mobile-menu-toggle span,
+        .mobile-menu-toggle::before,
+        .mobile-menu-toggle::after {
+            content: "";
+            display: block;
+            width: 22px;
+            height: 2px;
+            border-radius: 999px;
+            background: currentColor;
+            transition: transform 160ms ease, opacity 160ms ease;
+        }
+        .mobile-menu-toggle::before,
+        .mobile-menu-toggle::after {
+            position: absolute;
+        }
+        .mobile-menu-toggle::before {
+            transform: translateY(-7px);
+        }
+        .mobile-menu-toggle::after {
+            transform: translateY(7px);
+        }
+        .site-header.menu-open .mobile-menu-toggle span {
+            opacity: 0;
+        }
+        .site-header.menu-open .mobile-menu-toggle::before {
+            transform: rotate(45deg);
+        }
+        .site-header.menu-open .mobile-menu-toggle::after {
+            transform: rotate(-45deg);
+        }
         .primary-nav a,
         .auth-nav a {
             color: #fff;
@@ -327,8 +371,26 @@
         footer { padding: 1.5rem; text-align: center; font-size: 0.85rem; color: #78909c; }
         @media (max-width: 800px) {
             .site-header {
-                flex-direction: column;
-                align-items: flex-start;
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 0.85rem;
+            }
+            .site-header .brand {
+                min-width: 0;
+            }
+            .mobile-menu-toggle {
+                display: inline-flex;
+            }
+            .primary-nav,
+            .auth-nav {
+                display: none;
+                grid-column: 1 / -1;
+                width: 100%;
+            }
+            .site-header.menu-open .primary-nav,
+            .site-header.menu-open .auth-nav {
+                display: flex;
             }
             main { padding: 2rem 1.25rem; }
             .summary-value { font-size: 1.15rem; }
@@ -350,6 +412,7 @@
                 background-attachment: scroll;
             }
             .site-header {
+                position: sticky;
                 padding: 1rem 1.1rem;
                 gap: 1rem;
             }
@@ -444,7 +507,10 @@
             <span class="brand-title">Virval</span>
             <span class="brand-subtitle">Escuela de conductores</span>
         </div>
-        <nav class="primary-nav">
+        <button class="mobile-menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="site-menu">
+            <span aria-hidden="true"></span>
+        </button>
+        <nav class="primary-nav" id="site-menu">
             <a href="{% url 'core_web:landing' %}">Inicio</a>
             <a href="{% url 'core_web:alumnos' %}">Alumnos</a>
             <a href="{% url 'core_web:blog' %}">Blog</a>
@@ -475,5 +541,30 @@
     <footer>
         Entorno de pruebas web &middot; Plataforma de Examenes de Transito
     </footer>
+    <script>
+        (function () {
+            const header = document.querySelector(".site-header");
+            const toggle = document.querySelector(".mobile-menu-toggle");
+            if (!header || !toggle) {
+                return;
+            }
+
+            function setMenuOpen(isOpen) {
+                header.classList.toggle("menu-open", isOpen);
+                toggle.setAttribute("aria-expanded", String(isOpen));
+                toggle.setAttribute("aria-label", isOpen ? "Cerrar menu" : "Abrir menu");
+            }
+
+            toggle.addEventListener("click", function () {
+                setMenuOpen(!header.classList.contains("menu-open"));
+            });
+
+            header.querySelectorAll("a").forEach(function (link) {
+                link.addEventListener("click", function () {
+                    setMenuOpen(false);
+                });
+            });
+        }());
+    </script>
 </body>
 </html>
