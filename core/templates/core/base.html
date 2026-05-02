@@ -356,6 +356,21 @@
             gap: 0.6rem;
             width: 100%;
         }
+        .question-media {
+            max-width: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+        .question-media img {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            max-height: 220px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 6px;
+            margin: 0 auto;
+        }
         .exam-mobile-actions {
             display: none;
         }
@@ -457,6 +472,10 @@
             .page-back-link.btn,
             .btn,
             .btn-outline {
+                width: 100%;
+            }
+            .mobile-attempt-actions form,
+            .mobile-attempt-actions .btn {
                 width: 100%;
             }
             .question {
