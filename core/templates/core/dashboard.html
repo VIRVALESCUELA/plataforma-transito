@@ -188,7 +188,7 @@
         <span class="pill" style="font-size: 1rem; padding: 0.45rem 0.9rem; background: #fff3cd; color: #8a6d3b;">Historial de intentos</span>
     </h2>
     {% if history_attempts %}
-        <div style="overflow-x: auto;">
+        <div class="desktop-only" style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
@@ -245,6 +245,54 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        <div class="mobile-only mobile-attempt-list">
+            {% for attempt in history_attempts %}
+                <article class="mobile-attempt-card">
+                    <p>
+                        <strong>{{ attempt.template.name }}</strong>
+                    </p>
+                    <p>
+                        {% if attempt.status == 'ENTREGADO' %}
+                            <span class="status-pill completed">Entregado</span>
+                        {% elif attempt.status == 'EXPIRADO' %}
+                            <span class="status-pill expired">Expirado</span>
+                        {% else %}
+                            <span class="status-pill in-progress">En curso</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Inicio:</strong> {{ attempt.started_at|date:"d/m/Y H:i" }}</p>
+                    <p>
+                        <strong>Finalizo:</strong>
+                        {% if attempt.finished_at %}
+                            {{ attempt.finished_at|date:"d/m/Y H:i" }}
+                        {% else %}
+                            &mdash;
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Puntaje:</strong>
+                        {% if attempt.score is not None %}
+                            {{ attempt.score }}%
+                        {% else %}
+                            &mdash;
+                        {% endif %}
+                    </p>
+                    <div class="mobile-attempt-actions">
+                        <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
+                            Ver detalle
+                        </a>
+                        {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
+                            <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}">
+                                {% csrf_token %}
+                                <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">
+                                    Repetir
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
         </div>
     {% else %}
         <p>No hay intentos anteriores para mostrar.</p>
