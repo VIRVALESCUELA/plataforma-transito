@@ -6,6 +6,7 @@ from .web_views import (
     CourseActivationView,
     ExamAttemptDetailView,
     ExamDashboardView,
+    RepeatExamAttemptView,
     InscripcionCreateView,
     InscripcionManagementView,
     LandingView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("panel/inscripciones/", InscripcionManagementView.as_view(), name="manage-inscripciones"),
     path("panel/", ExamDashboardView.as_view(), name="dashboard"),
     path("panel/attempts/<int:pk>/", ExamAttemptDetailView.as_view(), name="attempt-detail"),
+    path("panel/attempts/<int:pk>/repeat/", RepeatExamAttemptView.as_view(), name="attempt-repeat"),
     path(
         "attempts/<int:pk>/",
         RedirectView.as_view(pattern_name="core_web:attempt-detail", permanent=False),

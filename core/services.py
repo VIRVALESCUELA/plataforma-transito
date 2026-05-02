@@ -59,6 +59,43 @@ def generate_exam_attempt(student, template):
     return attempt
 
 
+@transaction.atomic
+def repeat_exam_attempt(original_attempt):
+    if original_attempt is None:
+        raise ValueError("Se requiere un examen anterior para repetir.")
+
+    existing_attempt = get_active_attempt_for_template(
+        original_attempt.student,
+        original_attempt.template,
+    )
+    if existing_attempt is not None:
+        raise ValueError(
+            "Ya tienes un examen en curso para esta plantilla. Reanudalo desde tu panel."
+        )
+
+    original_questions = list(original_attempt.exam_questions.all())
+    if not original_questions:
+        raise ValueError("El examen anterior no tiene preguntas para repetir.")
+
+    new_attempt = ExamAttempt.objects.create(
+        student=original_attempt.student,
+        template=original_attempt.template,
+    )
+    for question in original_questions:
+        ExamQuestion.objects.create(
+            attempt=new_attempt,
+            reference_book=question.reference_book,
+            image=question.image.name if question.image else None,
+            question_text=question.question_text,
+            explanation=question.explanation,
+            topic=question.topic,
+            difficulty=question.difficulty,
+            reference_law=question.reference_law,
+            options=question.options,
+        )
+    return new_attempt
+
+
 def get_attempt_deadline(attempt):
     duration = getattr(attempt.template, "duration_minutes", 0) or 0
     if duration <= 0 or not attempt.started_at:

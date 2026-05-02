@@ -22,6 +22,7 @@ from .services import (
     get_remaining_seconds,
     grade_attempt,
     grade_single_answer,
+    repeat_exam_attempt,
     user_has_active_exam_access,
 )
 
@@ -559,6 +560,11 @@ class ExamAttemptDetailView(PrivateAreaMixin, DetailView):
             ExamAttemptStatus.ENTREGADO,
             ExamAttemptStatus.EXPIRADO,
         )
+        context["can_repeat"] = (
+            self.object.status in (ExamAttemptStatus.ENTREGADO, ExamAttemptStatus.EXPIRADO)
+            and user_has_active_exam_access(self.request.user)
+            and bool(entries)
+        )
         context["show_feedback"] = (
             self.object.status == ExamAttemptStatus.ENTREGADO
             and self.object.template.show_feedback
@@ -589,3 +595,33 @@ class ExamAttemptDetailView(PrivateAreaMixin, DetailView):
             )
             return redirect("core_web:dashboard")
         return super().dispatch(request, *args, **kwargs)
+
+
+class RepeatExamAttemptView(PrivateAreaMixin, View):
+    def post(self, request, *args, **kwargs):
+        if not user_has_active_exam_access(request.user):
+            messages.error(
+                request,
+                "Tu acceso al curso no esta activo. Ingresa tu codigo para continuar.",
+            )
+            return redirect("core_web:dashboard")
+
+        original_attempt = get_object_or_404(
+            ExamAttempt.objects.prefetch_related("exam_questions"),
+            pk=kwargs["pk"],
+            student=request.user,
+        )
+        check_and_expire_attempt(original_attempt)
+
+        if original_attempt.status == ExamAttemptStatus.EN_CURSO:
+            messages.info(request, "Este examen aun esta en curso. Puedes reanudarlo.")
+            return redirect("core_web:attempt-detail", pk=original_attempt.pk)
+
+        try:
+            new_attempt = repeat_exam_attempt(original_attempt)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("core_web:attempt-detail", pk=original_attempt.pk)
+
+        messages.success(request, "Se creo un nuevo intento con las mismas preguntas.")
+        return redirect("core_web:attempt-detail", pk=new_attempt.pk)

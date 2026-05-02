@@ -44,6 +44,14 @@
             &mdash; El examen ya no admite cambios.
         {% endif %}
     </p>
+    {% if can_repeat %}
+        <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}" style="margin-top: 1rem;">
+            {% csrf_token %}
+            <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas y el tiempo comenzara nuevamente. ¿Deseas continuar?');">
+                Repetir este mismo examen
+            </button>
+        </form>
+    {% endif %}
     <div class="exam-summary">
         <div class="summary-card">
             <span class="summary-label">Avance</span>

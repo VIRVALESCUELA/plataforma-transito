@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
@@ -66,14 +67,32 @@ class ExamTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(ExamAttempt)
 class ExamAttemptAdmin(admin.ModelAdmin):
-    list_display = ("id", "student", "template", "status", "score", "started_at", "finished_at")
+    list_display = ("id", "student", "student_email", "template", "status", "score", "started_at", "finished_at")
     list_filter = ("status", "template")
-    search_fields = ("student__username",)
+    search_fields = ("student__username", "student__first_name", "student__last_name", "student__email")
+    date_hierarchy = "started_at"
+    ordering = ("-started_at",)
+
+    def student_email(self, obj):
+        return obj.student.email or "-"
+
+    student_email.short_description = "Correo"
 
 
 @admin.register(ExamQuestion)
 class ExamQuestionAdmin(admin.ModelAdmin):
-    list_display = ("id", "attempt", "topic", "difficulty", "reference_law")
+    list_display = ("id", "attempt_link", "student", "question_short", "topic", "difficulty", "answer_status")
+    list_filter = ("topic", "difficulty", "attempt__status", "attempt__template")
+    search_fields = (
+        "question_text",
+        "topic",
+        "reference_law",
+        "reference_book",
+        "attempt__student__username",
+        "attempt__student__first_name",
+        "attempt__student__last_name",
+        "attempt__student__email",
+    )
     readonly_fields = (
         "attempt",
         "question_text",
@@ -84,13 +103,97 @@ class ExamQuestionAdmin(admin.ModelAdmin):
         "reference_book",
         "explanation",
     )
+    ordering = ("-attempt__started_at", "id")
+    list_select_related = ("attempt", "attempt__student")
+
+    def attempt_link(self, obj):
+        url = reverse("admin:core_examattempt_change", args=[obj.attempt_id])
+        return format_html('<a href="{}">Examen #{}</a>', url, obj.attempt_id)
+
+    attempt_link.short_description = "Examen"
+
+    def student(self, obj):
+        return obj.attempt.student
+
+    student.short_description = "Alumno"
+
+    def question_short(self, obj):
+        return (obj.question_text[:100] + "...") if len(obj.question_text) > 100 else obj.question_text
+
+    question_short.short_description = "Pregunta"
+
+    def answer_status(self, obj):
+        answer = getattr(obj, "answer", None)
+        if not answer:
+            return "Sin responder"
+        return "Correcta" if answer.is_correct else "Incorrecta"
+
+    answer_status.short_description = "Resultado"
 
 
 @admin.register(StudentAnswer)
 class StudentAnswerAdmin(admin.ModelAdmin):
-    list_display = ("id", "exam_question", "selected_index", "is_correct", "answered_at")
-    list_filter = ("is_correct",)
-    search_fields = ("exam_question__question_text",)
+    list_display = (
+        "id",
+        "student",
+        "attempt_link",
+        "question_short",
+        "selected_answer",
+        "correct_answer",
+        "is_correct",
+        "answered_at",
+    )
+    list_filter = ("is_correct", "exam_question__attempt__template", "exam_question__attempt__status")
+    search_fields = (
+        "exam_question__question_text",
+        "exam_question__topic",
+        "exam_question__attempt__student__username",
+        "exam_question__attempt__student__first_name",
+        "exam_question__attempt__student__last_name",
+        "exam_question__attempt__student__email",
+    )
+    date_hierarchy = "answered_at"
+    ordering = ("-answered_at",)
+    list_select_related = ("exam_question", "exam_question__attempt", "exam_question__attempt__student")
+
+    def student(self, obj):
+        return obj.exam_question.attempt.student
+
+    student.short_description = "Alumno"
+
+    def attempt_link(self, obj):
+        attempt = obj.exam_question.attempt
+        url = reverse("admin:core_examattempt_change", args=[attempt.id])
+        return format_html('<a href="{}">Examen #{}</a>', url, attempt.id)
+
+    attempt_link.short_description = "Examen"
+
+    def question_short(self, obj):
+        text = obj.exam_question.question_text
+        return (text[:100] + "...") if len(text) > 100 else text
+
+    question_short.short_description = "Pregunta"
+
+    def selected_answer(self, obj):
+        options = obj.exam_question.options or []
+        if obj.selected_indexes:
+            selected = []
+            for index in obj.selected_indexes:
+                if 0 <= index < len(options):
+                    selected.append(options[index].get("text", ""))
+            return " | ".join(selected) or "-"
+        if obj.selected_index is not None and 0 <= obj.selected_index < len(options):
+            return options[obj.selected_index].get("text", "")
+        return "-"
+
+    selected_answer.short_description = "Respuesta alumno"
+
+    def correct_answer(self, obj):
+        options = obj.exam_question.options or []
+        correct = [option.get("text", "") for option in options if option.get("is_correct")]
+        return " | ".join(correct) or "-"
+
+    correct_answer.short_description = "Respuesta correcta"
 
 
 @admin.register(Profile)

@@ -232,6 +232,14 @@
                                 <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
                                     Ver detalle
                                 </a>
+                                {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
+                                    <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">
+                                            Repetir
+                                        </button>
+                                    </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
