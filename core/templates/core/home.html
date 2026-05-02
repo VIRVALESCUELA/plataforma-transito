@@ -10,9 +10,9 @@
 <section class="hero">
     <div class="hero__copy">
         <span class="chip">DESDE 2011 FORMANDO CONDUCTORES</span>
-        <h1>APRUEBA TU EXAMEN Y OBTEN TU PRIMERA LICENCIA CLASE B</h1>
+        <h1>APRUEBA TU EXAMEN Y OBTÉN TU PRIMERA LICENCIA CLASE B</h1>
         <p>Formamos conductores responsables combinando clases presenciales en simulador de conducción,
-            practicas en recorrido urbano, simulador de examenes online y práctica ilimitada de sicotecnicos.</p>
+            practicas en recorrido urbano, simulador de exámenes online y práctica ilimitada de sicotecnicos.</p>
         <div class="hero__actions">
             <a class="btn-primary" href="#cursos">Ver cursos</a>
             <a class="btn-ghost" href="{% url 'login' %}">Entrar a la plataforma</a>
@@ -42,18 +42,18 @@
         <span class="chip" style="background: var(--virval-amber);">NUESTROS CURSOS</span>
         <h2 class="section-title">Programas destacados para todos los objetivos</h2>
         <p class="section-lead">Desde la primera clase teórica hasta tu examen final, nuestro equipo acompaña en cada fase con recursos digitales,  instructores certificados y practicas guiadas,  ensayos sicotécnicos realizados en sucursal
-            en horarios de atención de lunes a viernes,  ilimitado hasta su evaluación municipal, simulación de exámenes online por 30 días.</p>
+            en horarios de atención de lunes a viernes, simulación de exámenes online activado por 30 días.</p>
     </div>
     <div class="card-grid" style="margin-top: 1rem;">
         <article class="card">
-            <span class="chip">CURSO BASE MECANICO</span>
-            <h3>RESERVA CONDUCCION CON TEORIA APROBADA</h3>
+            <span class="chip">CURSO BASE MECÁNICO</span>
+            <h3>RESERVA CONDUCCIÓN CON TEORÍA APROBADA</h3>
             <p>
                Dirigido a personas sin conocimientos previos, futuros conductores que deseen realizar un curso desde cero.
                Incluye simulación de exámenes online por 30 días.
-               Prácticas de conducción de 45 minutos, que contemplan 12 sesiones controladas (dos módulos por día consecutivo).
+               Prácticas de conducción de 45 minutos, que contemplan 12 sesiones controladas (Dos módulos por día consecutivo).
                Horarios disponibles: 9:00, 10:30, 15:00 y 16:30.
-               Además, incluye 2 ensayos psicotécnicos tipo evaluación municipal.
+               Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal.
             </p>
             <img src="{% static 'core/clase1.png' %}" alt="Curso base mecánico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
             <p class="price">$ 175.000</p>
@@ -61,9 +61,9 @@
         </article>
         <article class="card">
             <span class="chip" style="background: var(--virval-amber);">CURSO INTENSIVO</span>
-            <h3>RESERVA CONDUCCION INMEDIATAMENTE</h3>
+            <h3>RESERVA CONDUCCIÓN INMEDIATAMENTE</h3>
             <p>
-              Dirigido a estudiantes y trabajadores que disponen de horarios limitados para la conducción. Nuestro programa incluye: 8 prácticas controladas de 60 minutos, simulación de exámenes online por 30 días y 2 ensayos psicotécnicos tipo evaluación municipal.
+              Dirigido a estudiantes y trabajadores que disponen de horarios limitados para la conducción. Nuestro programa incluye: 8 prácticas controladas de 60 minutos, simulación de exámenes online por 30 días y 2 ensayos sicotécnicos tipo evaluación municipal.
               Horarios de conducción disponibles: 12:00, 18:00 y 19:00 hrs.
 
               Acompañamiento personalizado para reforzar la confianza al volante.
@@ -73,15 +73,15 @@
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20intensivo">Tomar curso</a>
         </article>
         <article class="card">
-            <span class="chip" style="background: #ffe0df;">REFORZAMIENTO</span>
-            <h3>ALUMNOS CON CONDUCCION AVANZADA</h3>
+            <span class="chip" style="background: #ffe0df;">CURSO RUSH</span>
+            <h3>ALUMNOS CON CONDUCCIÓN AVANZADA</h3>
             <p>
                 Incluye 10 prácticas controladas, distribuidas en dos módulos por día consecutivo.
                 Horarios disponibles: 9:00, 10:30, 15:00 y 16:30 hrs.
 
                 Programa enfocado en el repaso de conducción en pendiente, preparación para el examen práctico y práctica en ruta municipal de Peñalolén.
 
-                Además, incluye 2 ensayos psicotécnicos tipo evaluación municipal y simulación de exámenes online por 30 días.
+                Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal y simulación de exámenes online por 30 días.
 
             </p>
             <img src="{% static 'core/refor2.png' %}" alt="Refuerzo de conducción" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
@@ -97,17 +97,17 @@
 
                 Contempla ruta extensa y ensayo en ruta municipal de Peñalolén.
 
-                Además, incluye 2 ensayos psicotécnicos en sucursal y simulación de exámenes online por 30 días.
+                Además, incluye 2 ensayos sicotécnicos en sucursal y simulación de exámenes online por 30 días.
             </p>
             <img src="{% static 'core/mujerphotgtp.png' %}" alt="Curso a domicilio" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
             <p class="price">$ 240.000</p>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20domicilio">Tomar curso</a>
         </article>
         <article class="card">
-            <span class="chip" style="background: var(--virval-amber);">TEORIA + SICOTECNICOS</span>
-            <h3>ALUMNOS CON CONDUCCION TOTAL</h3>
+            <span class="chip" style="background: var(--virval-amber);">TEORÍA + SICOTÉCNICOS</span>
+            <h3>ALUMNOS CON CONDUCCIÓN TOTAL</h3>
             <p> 
-                Programa enfocado en la formación teórica y ensayos psicomotores.
+                Programa enfocado en la formación teórica y ensayos sicotécnicos.
                 Incluye dos sesiones prácticas de psicotécnicos, donde conoceras tips de aprobación, además del programa teórico completo con simulación de exámenes en plataforma online por 30 días.
             </p>
             <img src="{% static 'core/teosico.png' %}" alt="Teoría y sicotécnicos" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
@@ -115,8 +115,8 @@
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Teoria%20%2B%20sicotecnicos">Tomar curso</a>
         </article>
         <article class="card">
-            <span class="chip" style="background: #ffe0df;">ENSAYO SICOTECNICO</span>
-            <h3>PARA RENOVACION O APROBACION B-C-A</h3>
+            <span class="chip" style="background: #ffe0df;">ENSAYO SICOTÉCNICO</span>
+            <h3>PARA RENOVACIÓN O APROBACIÓN B-C-A</h3>
             <p>                
                 Clase práctica de psicotécnicos: sesión de 45 minutos donde aplicaremos técnicas de control y conocerás los principales tips para aprobar.
                 Incluye aplicación práctica de: Test de LAY, test de punteado y test de reacción.
@@ -160,15 +160,15 @@
 <section style="margin: 4rem 0;">
     <div class="split-grid">
         <article class="card">
-            <p class="label">PLATAFORMA TEORICA</p>
+            <p class="label">PLATAFORMA TEÓRICA</p>
             <h3>Aula virtual y clases grabadas</h3>
             <p>Accede desde cualquier dispositivo revisa tu avance, descarga  material de estudio.</p>
             <img src="{% static 'core/platagtp.png' %}" alt="Plataforma teorica" style="width: 100%; border-radius: 12px; margin-top: 0.75rem;">
         </article>
         <article class="card">
-            <p class="label">ENSAYO SICOTECNICO</p>
+            <p class="label">ENSAYO SICOTÉCNICO</p>
             <h3>Practicas individuales ilimitadas hasta su examen municipal</h3>
-            <p>Técnicas de control y tips de aprobacion.</p>
+            <p>Técnicas de control y tips de aprobación.</p>
             <img src="{% static 'core/sicotecnico2.jpg' %}" alt="Soporte sicotecnico" style="width: 100%; border-radius: 12px; margin-top: 0.75rem;">
         </article>
         <article class="card">
@@ -183,7 +183,7 @@
 
 <section class="cta">
     <h3>Listo para comenzar?</h3>
-    <p>Reserva tu curso al wsp +56992734999 o una llamada al fono fijo 223118584 para conocer el plan ideal, realiza tu inscripcion y obtendras acceso inmediato al banco de preguntas.</p>
+    <p>Reserva tu curso al wsp +56992734999 o una llamada al fono fijo 223118584 para conocer el plan ideal, realiza tu inscripción y obtendrás acceso inmediato al banco de preguntas.</p>
     <div class="social-links" aria-label="Redes sociales">
         <a href="https://web.facebook.com/virval.escueladeconductores" target="_blank" rel="noopener" aria-label="Facebook">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -212,7 +212,7 @@
         </a>
     </div>
     <div class="hero__actions" style="justify-content: center;">
-        <a class="btn-ghost" style="border-color: #fff; color: #fff;" href="https://wa.me/56992734999" target="_blank" rel="noopener">Hablar con asesoria</a>
+        <a class="btn-ghost" style="border-color: #fff; color: #fff;" href="https://wa.me/56992734999" target="_blank" rel="noopener">Hablar con asesoría</a>
         <a class="btn-primary" href="{% url 'core_web:inscripcion' %}">Inscribirme</a>
     </div>
 </section>

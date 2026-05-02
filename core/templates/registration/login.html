@@ -11,9 +11,9 @@
     <section class="hero inscripcion-hero">
         <div class="card hero__copy inscripcion-copy">
             <span class="chip">ACCESO A LA PLATAFORMA</span>
-            <h1>Inicia sesion para entrar a tu panel personal</h1>
+            <h1>Inicia sesión para entrar a tu panel personal</h1>
             <p class="section-lead" style="margin-bottom: 0;">
-                Accede con tu usuario y contrasena para continuar con tus cursos, revisar tu avance y usar los recursos disponibles.
+                Accede con tu usuario y contraseña para continuar con tus cursos, revisar tu avance y usar los recursos disponibles.
             </p>
         </div>
         <div class="card inscripcion-shell">
@@ -31,7 +31,7 @@
                         {{ form.username.errors }}
                     </label>
                     <label class="form-field form-field-full" for="{{ form.password.id_for_label }}">
-                        <span class="form-label">Contrasena</span>
+                        <span class="form-label">Contraseña</span>
                         {{ form.password }}
                         {{ form.password.errors }}
                     </label>
@@ -45,7 +45,7 @@
             </form>
             <div class="auth-switch">
                 <span>No tienes cuenta?</span>
-                <a href="{% url 'student_signup' %}">Registrate aqui</a>
+                <a href="{% url 'student_signup' %}">Regístrate aquí</a>
             </div>
         </div>
     </section>
