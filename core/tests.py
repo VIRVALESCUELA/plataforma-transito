@@ -302,6 +302,81 @@ class ExamStudentFlowTests(TestCase):
         self.assertContains(response, "¿Deseas continuar?")
         self.assertContains(response, "exam-mobile-actions")
 
+    def test_dashboard_can_start_exam_for_selected_topic(self):
+        topic_normas = Topic.objects.create(name="Normas de circulación")
+        topic_mecanica = Topic.objects.create(name="Mecánica básica")
+        normas_question = Question.objects.create(
+            text="Pregunta de normas",
+            topic=topic_normas,
+        )
+        Option.objects.create(question=normas_question, text="Correcta", is_correct=True)
+        Option.objects.create(question=normas_question, text="Incorrecta", is_correct=False)
+        mecanica_question = Question.objects.create(
+            text="Pregunta de mecanica",
+            topic=topic_mecanica,
+        )
+        Option.objects.create(question=mecanica_question, text="Correcta", is_correct=True)
+        Option.objects.create(question=mecanica_question, text="Incorrecta", is_correct=False)
+
+        self.client.force_login(self.student)
+        response = self.client.post(
+            reverse("core_web:dashboard"),
+            {
+                "template_id": self.template.id,
+                "topic_id": topic_normas.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        attempt = ExamAttempt.objects.latest("id")
+        self.assertEqual(attempt.exam_questions.count(), 1)
+        self.assertEqual(attempt.exam_questions.first().topic, topic_normas.name)
+
+    def test_selected_small_topic_is_completed_with_other_small_topics(self):
+        self.template.total_questions = 3
+        self.template.save(update_fields=["total_questions"])
+        topic_efficient = Topic.objects.create(name="Conducción eficiente")
+        topic_convivencia = Topic.objects.create(name="Convivencia Vial")
+        topic_general = Topic.objects.create(name="Normas de circulación")
+
+        efficient_question = Question.objects.create(
+            text="Pregunta de conduccion eficiente",
+            topic=topic_efficient,
+        )
+        Option.objects.create(question=efficient_question, text="Correcta", is_correct=True)
+        Option.objects.create(question=efficient_question, text="Incorrecta", is_correct=False)
+
+        for index in range(2):
+            question = Question.objects.create(
+                text=f"Pregunta convivencia {index}",
+                topic=topic_convivencia,
+            )
+            Option.objects.create(question=question, text="Correcta", is_correct=True)
+            Option.objects.create(question=question, text="Incorrecta", is_correct=False)
+
+        for index in range(3):
+            question = Question.objects.create(
+                text=f"Pregunta normas {index}",
+                topic=topic_general,
+            )
+            Option.objects.create(question=question, text="Correcta", is_correct=True)
+            Option.objects.create(question=question, text="Incorrecta", is_correct=False)
+
+        self.client.force_login(self.student)
+        response = self.client.post(
+            reverse("core_web:dashboard"),
+            {
+                "template_id": self.template.id,
+                "topic_id": topic_efficient.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        attempt = ExamAttempt.objects.latest("id")
+        topics = set(attempt.exam_questions.values_list("topic", flat=True))
+        self.assertEqual(attempt.exam_questions.count(), 3)
+        self.assertEqual(topics, {topic_efficient.name, topic_convivencia.name})
+
 
 class ActivationFlowTests(TestCase):
     def setUp(self):

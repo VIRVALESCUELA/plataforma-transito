@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -15,7 +16,7 @@ from urllib.parse import quote
 import secrets
 
 from .forms import ActivationCodeForm, InscripcionForm, StudentSignupForm
-from .models import ActivationCode, ExamAttempt, ExamAttemptStatus, ExamTemplate, Inscripcion, Profile
+from .models import ActivationCode, ExamAttempt, ExamAttemptStatus, ExamTemplate, Inscripcion, Profile, Topic
 from .services import (
     check_and_expire_attempt,
     generate_exam_attempt,
@@ -318,6 +319,16 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             None,
         ) if has_exam_access else None
         templates = list(ExamTemplate.objects.all())
+        topic_choices = list(
+            Topic.objects.annotate(
+                active_question_count=Count(
+                    "question",
+                    filter=Q(question__is_active=True),
+                )
+            )
+            .filter(active_question_count__gt=0)
+            .order_by("name")
+        )
         for template in templates:
             template.active_attempt = next(
                 (
@@ -330,6 +341,7 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             )
 
         context["templates"] = templates
+        context["topic_choices"] = topic_choices
         context["attempts"] = attempts
         context["active_attempt"] = active_attempt
         context["history_attempts"] = [
@@ -414,8 +426,13 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
 
         template = get_object_or_404(ExamTemplate, pk=template_id)
 
+        topic = None
+        topic_id = request.POST.get("topic_id")
+        if topic_id:
+            topic = get_object_or_404(Topic, pk=topic_id)
+
         try:
-            attempt = generate_exam_attempt(request.user, template)
+            attempt = generate_exam_attempt(request.user, template, topic=topic)
         except ValueError as exc:
             messages.error(request, str(exc))
             return redirect("core_web:dashboard")

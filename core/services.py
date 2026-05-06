@@ -2,6 +2,7 @@ import random
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from .models import (
@@ -23,7 +24,7 @@ def user_has_active_exam_access(user):
     return profile.has_active_exam_access()
 
 @transaction.atomic
-def generate_exam_attempt(student, template):
+def generate_exam_attempt(student, template, topic=None):
     if student is None:
         raise ValueError("Se requiere un usuario autenticado para iniciar el examen.")
 
@@ -33,14 +34,46 @@ def generate_exam_attempt(student, template):
             "Ya tienes un examen en curso para esta plantilla. Reanudalo desde tu panel."
         )
 
-    pool = list(Question.objects.filter(is_active=True))
-    if len(pool) < template.total_questions:
-        raise ValueError(
-            "No hay suficientes preguntas disponibles para generar el examen."
-        )
+    questions = (
+        Question.objects.filter(is_active=True)
+        .select_related("topic")
+        .prefetch_related("options")
+    )
+    if topic is not None:
+        questions = questions.filter(topic=topic)
+    pool = list(questions)
+    if topic is not None:
+        if not pool:
+            raise ValueError(f"No hay preguntas disponibles en el tema {topic.name}.")
+        if len(pool) < template.total_questions:
+            selected_ids = {question.id for question in pool}
+            complementary_pool = list(
+                Question.objects.filter(
+                    is_active=True,
+                    topic__question__is_active=True,
+                )
+                .exclude(pk__in=selected_ids)
+                .select_related("topic")
+                .prefetch_related("options")
+                .annotate(
+                    active_topic_questions=Count(
+                        "topic__question",
+                        filter=Q(topic__question__is_active=True),
+                    )
+                )
+                .filter(active_topic_questions__lt=template.total_questions)
+                .distinct()
+            )
+            missing_count = template.total_questions - len(pool)
+            pool.extend(random.sample(complementary_pool, k=min(missing_count, len(complementary_pool))))
+        question_count = min(template.total_questions, len(pool))
+    else:
+        if len(pool) < template.total_questions:
+            raise ValueError("No hay suficientes preguntas disponibles para generar el examen.")
+        question_count = template.total_questions
 
     attempt = ExamAttempt.objects.create(student=student, template=template)
-    selected = random.sample(pool, k=template.total_questions)
+    selected = random.sample(pool, k=question_count)
     for q in selected:
         opts = list(q.options.all())
         random.shuffle(opts)
