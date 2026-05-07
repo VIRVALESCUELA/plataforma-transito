@@ -21,6 +21,7 @@ from .services import (
     check_and_expire_attempt,
     generate_exam_attempt,
     get_remaining_seconds,
+    get_student_exam_progress,
     grade_attempt,
     grade_single_answer,
     repeat_exam_attempt,
@@ -375,6 +376,7 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             for attempt in attempts
             if attempt.status == ExamAttemptStatus.ENTREGADO and attempt.score is not None
         ]
+        context["exam_progress"] = get_student_exam_progress(self.request.user) if has_exam_access else None
         context["total_attempts"] = len(attempts)
         context["approved_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score >= 85)
         context["failed_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score < 85)

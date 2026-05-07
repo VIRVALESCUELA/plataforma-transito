@@ -18,9 +18,11 @@ from .models import (
     Option,
     Profile,
     Question,
+    StudentAnswer,
     Topic,
 )
 from .models import UserRole
+from .services import generate_exam_attempt, get_student_exam_progress, grade_single_answer
 
 
 class AuthFlowTests(TestCase):
@@ -812,3 +814,136 @@ class AdminLabelsTests(TestCase):
     def test_profile_and_inscripcion_have_clear_admin_labels(self):
         self.assertEqual(Profile._meta.verbose_name_plural, "Registros de plataforma")
         self.assertEqual(Inscripcion._meta.verbose_name_plural, "Solicitudes de inscripcion")
+
+
+class StudentProgressTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.student = user_model.objects.create_user(
+            username="progress-student",
+            password="strong-pass-123",
+        )
+        profile = self.student.profile
+        profile.access_activated_at = timezone.now()
+        profile.access_expires_at = timezone.now() + timedelta(days=30)
+        profile.activated_course_name = "Clase B"
+        profile.save()
+        self.topic_normas = Topic.objects.create(name="Normas")
+        self.topic_senales = Topic.objects.create(name="Senales")
+        self.template = ExamTemplate.objects.create(
+            name="Examen clase B",
+            total_questions=2,
+            duration_minutes=45,
+        )
+
+    def _create_question(self, text, topic):
+        question = Question.objects.create(text=text, topic=topic)
+        Option.objects.create(question=question, text="Correcta", is_correct=True)
+        Option.objects.create(question=question, text="Incorrecta", is_correct=False)
+        return question
+
+    def _create_delivered_attempt(self, answered_questions):
+        attempt = ExamAttempt.objects.create(
+            student=self.student,
+            template=self.template,
+            status=ExamAttemptStatus.ENTREGADO,
+            score=0,
+            finished_at=timezone.now(),
+        )
+        correct_count = 0
+        for question, is_correct in answered_questions:
+            exam_question = ExamQuestion.objects.create(
+                attempt=attempt,
+                source_question=question,
+                question_text=question.text,
+                topic=question.topic.name,
+                options=[
+                    {"text": "Correcta", "is_correct": True},
+                    {"text": "Incorrecta", "is_correct": False},
+                ],
+            )
+            StudentAnswer.objects.create(
+                exam_question=exam_question,
+                selected_index=0 if is_correct else 1,
+                selected_indexes=[0 if is_correct else 1],
+                is_correct=is_correct,
+            )
+            correct_count += 1 if is_correct else 0
+        attempt.score = int(round((correct_count / len(answered_questions)) * 100))
+        attempt.save(update_fields=["score"])
+        return attempt
+
+    def test_progress_calculates_general_coverage_and_topics(self):
+        q1 = self._create_question("Normas 1", self.topic_normas)
+        q2 = self._create_question("Normas 2", self.topic_normas)
+        q3 = self._create_question("Senales 1", self.topic_senales)
+        self._create_question("Senales 2", self.topic_senales)
+        self._create_delivered_attempt([(q1, True), (q2, False), (q3, True)])
+
+        progress = get_student_exam_progress(self.student)
+
+        self.assertEqual(progress["coverage_percent"], 75)
+        self.assertEqual(progress["general_percent"], 67)
+        self.assertEqual(progress["failed_pending_count"], 1)
+        topic_percentages = {
+            topic["topic"]: topic["percent"] for topic in progress["topics"]
+        }
+        self.assertEqual(topic_percentages["Normas"], 50)
+        self.assertEqual(topic_percentages["Senales"], 100)
+
+    def test_progress_includes_topics_without_answers(self):
+        self._create_question("Normas 1", self.topic_normas)
+        self._create_question("Senales 1", self.topic_senales)
+
+        progress = get_student_exam_progress(self.student)
+
+        topics = {topic["topic"]: topic for topic in progress["topics"]}
+        self.assertEqual(topics["Normas"]["answered"], 0)
+        self.assertEqual(topics["Normas"]["percent"], 0)
+        self.assertEqual(topics["Normas"]["coverage_percent"], 0)
+        self.assertEqual(topics["Senales"]["answered"], 0)
+
+    def test_new_attempt_prioritizes_unseen_questions_before_repeats(self):
+        q1 = self._create_question("Vista", self.topic_normas)
+        q2 = self._create_question("Nueva", self.topic_normas)
+        self._create_delivered_attempt([(q1, True)])
+
+        attempt = generate_exam_attempt(self.student, self.template)
+
+        selected_ids = {
+            exam_question.source_question_id
+            for exam_question in attempt.exam_questions.all()
+        }
+        self.assertIn(q2.id, selected_ids)
+
+
+class AnswerGradingTests(TestCase):
+    def test_multi_answer_requires_all_correct_options(self):
+        user_model = get_user_model()
+        student = user_model.objects.create_user(
+            username="multi-answer-student",
+            password="strong-pass-123",
+        )
+        template = ExamTemplate.objects.create(name="Examen multi", total_questions=1)
+        attempt = ExamAttempt.objects.create(student=student, template=template)
+        exam_question = ExamQuestion.objects.create(
+            attempt=attempt,
+            question_text="Seleccione dos respuestas correctas",
+            options=[
+                {"text": "Correcta A", "is_correct": True},
+                {"text": "Incorrecta", "is_correct": False},
+                {"text": "Correcta B", "is_correct": True},
+            ],
+        )
+
+        partial_feedback = grade_single_answer(exam_question, [0], include_feedback=True)
+        exam_question.answer.refresh_from_db()
+
+        self.assertFalse(partial_feedback["is_correct"])
+        self.assertFalse(exam_question.answer.is_correct)
+
+        complete_feedback = grade_single_answer(exam_question, [0, 2], include_feedback=True)
+        exam_question.answer.refresh_from_db()
+
+        self.assertTrue(complete_feedback["is_correct"])
+        self.assertTrue(exam_question.answer.is_correct)

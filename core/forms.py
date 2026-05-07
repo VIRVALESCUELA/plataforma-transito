@@ -11,10 +11,11 @@ COURSE_CHOICES = [
     ("", "Selecciona un curso"),
     ("Curso base mecanico", "Curso base mecanico"),
     ("Curso intensivo", "Curso intensivo"),
-    ("Reforzamiento", "Reforzamiento"),
+    ("Curso rush", "Curso rush"),
     ("Curso domicilio", "Curso domicilio"),
-    ("Teoria + sicotecnicos", "Teoria + sicotecnicos"),
+    ("Curso teorico", "Curso teorico"),
     ("Ensayo sicotecnico", "Ensayo sicotecnico"),
+    ("Teorico promo Instagram", "Teorico promo Instagram"),
     ("Help me!", "Help me!"),
     ("Full automatico", "Full automatico"),
 ]

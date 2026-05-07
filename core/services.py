@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from datetime import timedelta
 
 from django.db import transaction
@@ -14,6 +15,10 @@ from .models import (
     StudentAnswer,
 )
 
+EARLY_EXAM_LIMIT = 18
+EARLY_FAILED_REVIEW_RATIO = 0.2
+LATE_FAILED_REVIEW_RATIO = 0.5
+
 
 def user_has_active_exam_access(user):
     if user is None or not getattr(user, "is_authenticated", False):
@@ -22,6 +27,111 @@ def user_has_active_exam_access(user):
     if profile is None:
         profile, _ = Profile.objects.get_or_create(user=user)
     return profile.has_active_exam_access()
+
+
+def _question_key_from_exam_question(exam_question):
+    if exam_question.source_question_id:
+        return ("source", exam_question.source_question_id)
+    return ("text", exam_question.question_text.strip())
+
+
+def _topic_name_from_exam_question(exam_question, known_topic_names=None):
+    source_question = getattr(exam_question, "source_question", None)
+    source_topic = getattr(source_question, "topic", None)
+    if source_topic:
+        return source_topic.name
+    snapshot_topic = exam_question.topic or ""
+    if snapshot_topic and (
+        known_topic_names is None or snapshot_topic in known_topic_names
+    ):
+        return snapshot_topic
+    return "Sin clasificar"
+
+
+def _get_student_practice_state(student):
+    delivered_attempts = (
+        ExamAttempt.objects.filter(
+            student=student,
+            status=ExamAttemptStatus.ENTREGADO,
+        )
+        .order_by("started_at", "id")
+        .prefetch_related("exam_questions__answer", "exam_questions__source_question")
+    )
+    seen_source_ids = set()
+    latest_by_question = {}
+
+    for attempt in delivered_attempts:
+        for exam_question in attempt.exam_questions.all():
+            answer = getattr(exam_question, "answer", None)
+            if answer is None:
+                continue
+            if exam_question.source_question_id:
+                seen_source_ids.add(exam_question.source_question_id)
+            latest_by_question[_question_key_from_exam_question(exam_question)] = answer.is_correct
+
+    failed_source_ids = {
+        key[1]
+        for key, is_correct in latest_by_question.items()
+        if key[0] == "source" and not is_correct
+    }
+    return {
+        "seen_source_ids": seen_source_ids,
+        "failed_source_ids": failed_source_ids,
+        "delivered_attempt_count": delivered_attempts.count(),
+    }
+
+
+def _sample_without_repeating(pool, count, selected_ids):
+    available = [question for question in pool if question.id not in selected_ids]
+    if count <= 0 or not available:
+        return []
+    return random.sample(available, k=min(count, len(available)))
+
+
+def _select_practice_questions(pool, question_count, student):
+    state = _get_student_practice_state(student)
+    selected = []
+    selected_ids = set()
+
+    failed_ratio = (
+        EARLY_FAILED_REVIEW_RATIO
+        if state["delivered_attempt_count"] < EARLY_EXAM_LIMIT
+        else LATE_FAILED_REVIEW_RATIO
+    )
+    target_failed_count = int(round(question_count * failed_ratio))
+
+    failed_pool = [
+        question for question in pool if question.id in state["failed_source_ids"]
+    ]
+    failed_selection = _sample_without_repeating(
+        failed_pool,
+        target_failed_count,
+        selected_ids,
+    )
+    selected.extend(failed_selection)
+    selected_ids.update(question.id for question in failed_selection)
+
+    missing_count = question_count - len(selected)
+    unseen_pool = [
+        question
+        for question in pool
+        if question.id not in state["seen_source_ids"] and question.id not in selected_ids
+    ]
+    unseen_selection = _sample_without_repeating(
+        unseen_pool,
+        missing_count,
+        selected_ids,
+    )
+    selected.extend(unseen_selection)
+    selected_ids.update(question.id for question in unseen_selection)
+
+    missing_count = question_count - len(selected)
+    fill_selection = _sample_without_repeating(pool, missing_count, selected_ids)
+    selected.extend(fill_selection)
+
+    random.shuffle(selected)
+    return selected
+
 
 @transaction.atomic
 def generate_exam_attempt(student, template, topic=None):
@@ -73,13 +183,14 @@ def generate_exam_attempt(student, template, topic=None):
         question_count = template.total_questions
 
     attempt = ExamAttempt.objects.create(student=student, template=template)
-    selected = random.sample(pool, k=question_count)
+    selected = _select_practice_questions(pool, question_count, student)
     for q in selected:
         opts = list(q.options.all())
         random.shuffle(opts)
         options_payload = [{"text": o.text, "is_correct": o.is_correct} for o in opts]
         ExamQuestion.objects.create(
             attempt=attempt,
+            source_question=q,
             question_text=q.text,
             explanation=q.explanation,
             topic=q.topic.name if q.topic else '',
@@ -117,6 +228,7 @@ def repeat_exam_attempt(original_attempt):
     for question in original_questions:
         ExamQuestion.objects.create(
             attempt=new_attempt,
+            source_question=question.source_question,
             reference_book=question.reference_book,
             image=question.image.name if question.image else None,
             question_text=question.question_text,
@@ -255,3 +367,119 @@ def grade_attempt(attempt):
     attempt.finished_at = timezone.now()
     attempt.save(update_fields=['score', 'status', 'finished_at'])
     return score
+
+
+def get_student_exam_progress(student):
+    active_question_count = Question.objects.filter(is_active=True).count()
+    active_topic_counts = {
+        item["topic__name"] or "Sin tema": item["total"]
+        for item in Question.objects.filter(is_active=True)
+        .values("topic__name")
+        .annotate(total=Count("id"))
+    }
+    active_topic_names = set(active_topic_counts)
+    attempts = (
+        ExamAttempt.objects.filter(
+            student=student,
+            status=ExamAttemptStatus.ENTREGADO,
+        )
+        .order_by("started_at", "id")
+        .prefetch_related("exam_questions__answer", "exam_questions__source_question__topic")
+    )
+
+    answered = 0
+    correct = 0
+    seen_keys = set()
+    seen_topic_keys = defaultdict(set)
+    topic_stats = defaultdict(lambda: {"topic": "", "answered": 0, "correct": 0})
+    latest_by_question = {}
+
+    for attempt in attempts:
+        for exam_question in attempt.exam_questions.all():
+            answer = getattr(exam_question, "answer", None)
+            if answer is None:
+                continue
+
+            topic_name = _topic_name_from_exam_question(exam_question, active_topic_names)
+            question_key = _question_key_from_exam_question(exam_question)
+            answered += 1
+            if answer.is_correct:
+                correct += 1
+
+            seen_keys.add(question_key)
+            seen_topic_keys[topic_name].add(question_key)
+            topic_stats[topic_name]["topic"] = topic_name
+            topic_stats[topic_name]["answered"] += 1
+            topic_stats[topic_name]["correct"] += 1 if answer.is_correct else 0
+            latest_by_question[question_key] = {
+                "is_correct": answer.is_correct,
+                "topic": topic_name,
+                "text": exam_question.question_text,
+            }
+
+    general_percent = int(round((correct / answered) * 100)) if answered else None
+    coverage_percent = (
+        int(round((len(seen_keys) / active_question_count) * 100))
+        if active_question_count
+        else 0
+    )
+    failed_pending = [
+        item for item in latest_by_question.values() if not item["is_correct"]
+    ]
+    topics = []
+    all_topic_names = set(active_topic_counts) | set(topic_stats)
+    for topic_name in all_topic_names:
+        stats = topic_stats[topic_name]
+        topic_answered = stats["answered"]
+        topic_correct = stats["correct"]
+        topic_total_bank = active_topic_counts.get(topic_name, 0)
+        topics.append(
+            {
+                "topic": topic_name,
+                "answered": topic_answered,
+                "correct": topic_correct,
+                "percent": int(round((topic_correct / topic_answered) * 100))
+                if topic_answered
+                else 0,
+                "coverage_percent": int(
+                    round((len(seen_topic_keys[topic_name]) / topic_total_bank) * 100)
+                )
+                if topic_total_bank
+                else 0,
+                "bank_total": topic_total_bank,
+            }
+        )
+
+    topics.sort(key=lambda item: (item["percent"], -item["answered"]))
+    recent_scores = [
+        attempt.score
+        for attempt in attempts.order_by("-finished_at", "-id")[:5]
+        if attempt.score is not None
+    ]
+    recent_average = (
+        int(round(sum(recent_scores) / len(recent_scores))) if recent_scores else None
+    )
+    ready_for_municipal = bool(
+        attempts.count() >= 20
+        and coverage_percent >= 85
+        and general_percent is not None
+        and general_percent >= 90
+        and len(failed_pending) <= 10
+        and recent_scores
+        and all(score >= 90 for score in recent_scores)
+    )
+
+    return {
+        "answered": answered,
+        "correct": correct,
+        "attempt_count": attempts.count(),
+        "bank_total": active_question_count,
+        "seen_questions": len(seen_keys),
+        "coverage_percent": min(100, coverage_percent),
+        "general_percent": general_percent,
+        "failed_pending_count": len(failed_pending),
+        "recent_average": recent_average,
+        "topics": topics,
+        "weak_topics": [topic for topic in topics if topic["answered"] and topic["percent"] < 85],
+        "ready_for_municipal": ready_for_municipal,
+    }

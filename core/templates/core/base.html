@@ -142,6 +142,32 @@
         .btn:hover { background: #1565c0; }
         .btn-outline { background: #fff; color: var(--brand-blue); border: 2px solid var(--brand-blue); }
         .btn-outline:hover { background: #bbdefb; }
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            right: 20px;
+            background: #25d366;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            font-size: 30px;
+            line-height: 60px;
+            z-index: 1000;
+            text-decoration: none;
+            box-shadow: 2px 2px 10px rgba(0,0,0,.3);
+            transition: transform 160ms ease;
+        }
+        .whatsapp-float:hover {
+            transform: translateY(-3px);
+        }
+        .whatsapp-float svg {
+            width: 34px;
+            height: 34px;
+            fill: currentColor;
+            vertical-align: middle;
+        }
         .message-list { list-style: none; padding: 0; margin: 0 0 1.5rem 0; }
         .message { padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 0.6rem; font-weight: 600; }
         .message.success { background: #c8e6c9; color: #1b5e20; }
@@ -172,6 +198,7 @@
         .option { background: #f1f5f9; border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem; border: 2px solid transparent; transition: background 120ms ease, border-color 120ms ease; }
         .option.selected { border-color: var(--brand-blue); background: #e3f2fd; }
         .option.correct { border-color: #2e7d32; background: #e8f5e9; }
+        .option.partial { border-color: #f9a825; background: #fff8e1; }
         .option.incorrect { border-color: #c62828; background: #ffebee; }
         .feedback { margin-top: 0.8rem; font-size: 0.9rem; background: #e3f2fd; padding: 0.8rem; border-radius: 8px; }
         .meta { font-size: 0.85rem; color: #d2e5de; }
@@ -190,6 +217,10 @@
         .highlight-card {
             background: linear-gradient(135deg, rgba(13, 71, 161, 0.08), rgba(67, 160, 71, 0.1));
             border: 1px solid rgba(30, 136, 229, 0.2);
+        }
+        .access-status-card {
+            background: #eef7f0;
+            border: 1px solid rgba(31, 75, 66, 0.16);
         }
         .summary-label {
             display: block;
@@ -263,8 +294,10 @@
             position: relative;
             overflow: hidden;
             padding: 1.45rem;
-            border: 1px solid rgba(31, 75, 66, 0.2);
-            background: #eef7f0;
+            border: none;
+            background:
+                linear-gradient(120deg, rgba(18, 53, 44, 0.86), rgba(31, 94, 82, 0.76)),
+                url("{% static 'core/ENPRACTICA.png' %}") center / cover no-repeat;
             box-shadow: 0 16px 38px rgba(31, 45, 61, 0.1);
         }
         .exam-template-card::before {
@@ -282,11 +315,11 @@
         }
         .exam-template-card h3 {
             margin: 0.35rem 0 0;
-            color: #182635;
+            color: #fff;
             font-size: 1.35rem;
         }
         .exam-template-tag {
-            color: #607d8b;
+            color: #f4efe3;
             font-weight: 700;
         }
         .exam-template-stats {
@@ -298,21 +331,21 @@
             min-height: 72px;
             padding: 0.8rem 0.9rem;
             border-radius: 14px;
-            background: rgba(255, 255, 255, 0.82);
-            border: 1px solid rgba(31, 75, 66, 0.12);
-            box-shadow: 0 8px 18px rgba(31, 45, 61, 0.06);
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
         }
         .exam-template-stat span {
             display: block;
             margin-bottom: 0.25rem;
-            color: #607d8b;
+            color: #f4efe3;
             font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
         }
         .exam-template-stat strong {
-            color: #1f2d3d;
+            color: #fff;
             font-size: 1.05rem;
         }
         .exam-template-actions {
@@ -499,6 +532,13 @@
                 color: #455a64;
                 text-align: center;
             }
+            .whatsapp-float {
+                width: 56px;
+                height: 56px;
+                right: 14px;
+                bottom: 14px;
+                line-height: 56px;
+            }
             footer {
                 padding: 1rem;
             }
@@ -544,6 +584,11 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    <a class="whatsapp-float" href="https://wa.me/56992734999" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20.52 3.48A11.8 11.8 0 0 0 12 0A11.9 11.9 0 0 0 .08 11.9A11.6 11.6 0 0 0 2.5 20L0 24l4.2-1.2A12 12 0 0 0 12 23.6h.01A11.9 11.9 0 0 0 24 11.88a11.8 11.8 0 0 0-3.48-8.4zM12 21.5h-.01a9.6 9.6 0 0 1-4.88-1.32l-.35-.2-2.5.72l.7-2.43l-.22-.38A9.4 9.4 0 0 1 2.4 11.9A9.6 9.6 0 0 1 12 2.4a9.5 9.5 0 0 1 6.82 16.2A9.5 9.5 0 0 1 12 21.5zm5.3-7.2c-.3-.15-1.8-.9-2-.98c-.26-.1-.44-.15-.62.15c-.18.3-.7.98-.86 1.18c-.15.2-.32.22-.62.07c-.3-.15-1.25-.46-2.4-1.47c-.88-.78-1.47-1.74-1.64-2.03c-.18-.3-.02-.46.13-.61c.13-.13.3-.32.45-.47c.15-.15.2-.26.3-.44c.1-.18.05-.33-.02-.47c-.15-.15-.62-1.5-.84-2.05c-.22-.53-.44-.46-.62-.46c-.15 0-.33-.03-.51-.03c-.18 0-.47.07-.72.33c-.25.26-.95.93-.95 2.26c0 1.33.98 2.62 1.12 2.8c.15.2 1.93 2.95 4.68 4.1c.65.28 1.16.45 1.55.58c.65.2 1.25.18 1.72.1c.53-.08 1.64-.67 1.87-1.32c.23-.65.23-1.2.16-1.32c-.07-.12-.26-.2-.56-.35z"/>
+        </svg>
+    </a>
     <footer>
         Plataforma de Exámenes de Tránsito &middot; Desarrollado por safesatis@gmail.com &middot; Todos los derechos reservados
     </footer>

@@ -136,7 +136,7 @@
                         <ul class="options">
                             {% for option in question.options %}
                                 {% with idx=forloop.counter0 %}
-                                    <li class="option{% if selected and idx in selected %} selected{% endif %}{% if show_feedback and idx in correct %} correct{% endif %}{% if show_feedback and selected and idx in selected and idx not in correct %} incorrect{% endif %}">
+                                    <li class="option{% if selected and idx in selected %} selected{% endif %}{% if show_feedback and idx in correct %} correct{% endif %}{% if show_feedback and answer and not answer.is_correct and selected and idx in selected and idx in correct %} partial{% endif %}{% if show_feedback and selected and idx in selected and idx not in correct %} incorrect{% endif %}">
                                         <label class="question-option-label">
                                             <input type="checkbox"
                                                    name="answers-{{ question.id }}"

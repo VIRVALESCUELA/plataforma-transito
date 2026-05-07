@@ -150,6 +150,20 @@
     margin-top: 0.4rem;
 }
 
+.course-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 12px;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.course-image--teorico {
+    aspect-ratio: auto;
+    height: clamp(130px, 18vw, 165px);
+    object-position: center 28%;
+}
+
 .card h3 {
     margin-top: 0.4rem;
     margin-bottom: 0.8rem;

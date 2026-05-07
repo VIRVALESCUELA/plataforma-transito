@@ -45,7 +45,7 @@
 {% endif %}
 
 <section class="dashboard-section">
-    <article class="card {% if has_exam_access %}highlight-card{% endif %}">
+    <article class="card {% if has_exam_access %}highlight-card access-status-card{% endif %}">
         <h2 style="margin-top: 0;">Estado de acceso</h2>
         {% if has_exam_access %}
             <p>
@@ -119,6 +119,91 @@
         <div style="margin-top: 1.25rem;">
             <a class="btn" href="{% url 'core_web:attempt-detail' active_attempt.pk %}">Reanudar examen</a>
         </div>
+    </article>
+</section>
+{% endif %}
+
+{% if has_exam_access and exam_progress %}
+<section class="dashboard-section">
+    <article class="card">
+        <div class="section-heading">
+            <h2 style="margin-top: 0;">Avance del banco de preguntas</h2>
+        </div>
+        <div class="exam-summary">
+            <div class="summary-card">
+                <span class="summary-label">Cobertura del banco</span>
+                <span class="summary-value">{{ exam_progress.coverage_percent }}%</span>
+                <small>Avance estimado sobre preguntas distintas</small>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Rendimiento general</span>
+                <span class="summary-value">
+                    {% if exam_progress.general_percent is not None %}
+                        {{ exam_progress.general_percent }}%
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </span>
+                <small>{{ exam_progress.correct }} correctas de {{ exam_progress.answered }} respondidas</small>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Falladas pendientes</span>
+                <span class="summary-value">{{ exam_progress.failed_pending_count }}</span>
+                <small>Preguntas que conviene repetir</small>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Ultimos 5 examenes</span>
+                <span class="summary-value">
+                    {% if exam_progress.recent_average is not None %}
+                        {{ exam_progress.recent_average }}%
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </span>
+                <small>Promedio de los intentos mas recientes</small>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+            {% if exam_progress.ready_for_municipal %}
+                <span class="status-pill completed">Listo para examen municipal</span>
+            {% elif exam_progress.attempt_count == 0 %}
+                <span class="status-pill in-progress">Comienza con tu primer examen</span>
+            {% else %}
+                <span class="status-pill in-progress">En entrenamiento</span>
+            {% endif %}
+        </div>
+
+        {% if exam_progress.topics %}
+            <div style="margin-top: 1.5rem; overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tema</th>
+                            <th>Rendimiento</th>
+                            <th>Cobertura</th>
+                            <th>Respondidas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for topic in exam_progress.topics %}
+                            <tr>
+                                <td>{{ topic.topic }}</td>
+                                <td>{{ topic.percent }}%</td>
+                                <td>{{ topic.coverage_percent }}%</td>
+                                <td>{{ topic.answered }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if exam_progress.weak_topics %}
+            <p style="margin: 1rem 0 0; color: #8a6d3b;">
+                Refuerza primero los temas bajo 85%; los nuevos examenes mezclaran preguntas no vistas con preguntas falladas.
+            </p>
+        {% endif %}
     </article>
 </section>
 {% endif %}

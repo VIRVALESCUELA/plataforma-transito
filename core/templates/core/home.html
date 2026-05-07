@@ -3,7 +3,7 @@
 {% block title %}Virval - Escuela de conductores{% endblock %}
 {% block extra_head %}
     {{ block.super }}
-    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=4">
 {% endblock %}
 
 {% block content %}
@@ -16,7 +16,7 @@
         <div class="hero__actions">
             <a class="btn-primary" href="#cursos">Ver cursos</a>
             <a class="btn-ghost" href="{% url 'login' %}">Entrar a la plataforma</a>
-            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}">Tomar curso</a>
+            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}">Reclamar teórico gratis seguidor instagram</a>
         </div>
         <ul class="hero-stats">
             <li>
@@ -87,7 +87,7 @@
             </p>
             <img src="{% static 'core/refor2.png' %}" alt="Refuerzo de conducción" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
             <p class="price">$ 150.000</p>
-            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Reforzamiento">Tomar curso</a>
+            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20rush">Tomar curso</a>
         </article>
         <article class="card">
             <span class="chip">CURSO DOMICILIO</span>
@@ -105,15 +105,15 @@
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20domicilio">Tomar curso</a>
         </article>
         <article class="card">
-            <span class="chip" style="background: var(--virval-amber);">TEORÍA + SICOTÉCNICOS</span>
+            <span class="chip" style="background: var(--virval-amber);">CURSO TEÓRICO</span>
             <h3>ALUMNOS CON CONDUCCIÓN TOTAL</h3>
             <p> 
-                Programa enfocado en la formación teórica y ensayos sicotécnicos.
-                Incluye dos sesiones prácticas de psicotécnicos, donde conoceras tips de aprobación, además del programa teórico completo con simulación de exámenes en plataforma online por 30 días.
+                Programa enfocado en la formación teórica para la obtención de la licencia clase B, dirigido a personas que ya cuentan con habilidades de conducción pero necesitan reforzar sus conocimientos teóricos para aprobar el examen municipal.
+                simulación de exámenes en plataforma online por 30 días.
             </p>
-            <img src="{% static 'core/teosico.png' %}" alt="Teoría y sicotécnicos" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
-            <p class="price">$ 50.000</p>
-            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Teoria%20%2B%20sicotecnicos">Tomar curso</a>
+            <img class="course-image course-image--teorico" src="{% static 'core/TEORIA1.jpeg' %}" alt="Curso teórico clase B">
+            <p class="price">$ 5.000</p>
+            <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20teorico">Tomar curso</a>
         </article>
         <article class="card">
             <span class="chip" style="background: #ffe0df;">ENSAYO SICOTÉCNICO</span>
@@ -130,10 +130,10 @@
             <span class="chip" style="background: #ffe0df;">HELP ME!</span>
             <h3>PARA PERSONAS CON LICENCIA</h3>
             <p> 
-                Programa de acompañamiento en vehículo propio del alumno.
-                Enfocado en el refuerzo de la confianza en la vía y el desarrollo de técnicas de autocontrol en el tránsito.
+                Programa de acompañamiento en vehículo propio del alumno "Alumno con licencia"
+                o clase reforzamiento con auto de escuela, Enfocado en el refuerzo de la confianza en la vía.
 
-                Clases de 2 horas por día, 
+                Clases de 2 horas.
                 Disponibilidad de acompañamiento los días sábado o domingo.
             </p>
             <img src="{% static 'core/imgsusto.png' %}" alt="Acompañamiento práctico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">

@@ -118,6 +118,13 @@ class ExamAttempt(models.Model):
 
 class ExamQuestion(models.Model):
     attempt = models.ForeignKey(ExamAttempt, related_name='exam_questions', on_delete=models.CASCADE)
+    source_question = models.ForeignKey(
+        Question,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="exam_snapshots",
+    )
     # Snapshot para congelar el contenido aunque cambie el banco
     reference_book = models.CharField(max_length=100, blank=True)  # agregado para mostrar imagen de examen
     image = models.ImageField(upload_to="questions/", blank=True, null=True)
