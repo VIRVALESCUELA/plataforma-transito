@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -16,7 +16,16 @@ from urllib.parse import quote
 import secrets
 
 from .forms import ActivationCodeForm, InscripcionForm, StudentSignupForm
-from .models import ActivationCode, ExamAttempt, ExamAttemptStatus, ExamTemplate, Inscripcion, Profile, Topic
+from .models import (
+    ActivationCode,
+    ExamAttempt,
+    ExamAttemptStatus,
+    ExamTemplate,
+    Inscripcion,
+    Profile,
+    Topic,
+    UserRole,
+)
 from .services import (
     check_and_expire_attempt,
     generate_exam_attempt,
@@ -220,6 +229,68 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
 
         messages.error(request, "Accion no reconocida.")
         return redirect("core_web:manage-inscripciones")
+
+
+class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/staff_students.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
+        students = (
+            Profile.objects.filter(role=UserRole.ALUMNO)
+            .select_related("user")
+            .annotate(
+                attempt_count=Count("user__examattempt", distinct=True),
+                delivered_count=Count(
+                    "user__examattempt",
+                    filter=Q(user__examattempt__status=ExamAttemptStatus.ENTREGADO),
+                    distinct=True,
+                ),
+                average_score=Avg(
+                    "user__examattempt__score",
+                    filter=Q(
+                        user__examattempt__status=ExamAttemptStatus.ENTREGADO,
+                        user__examattempt__score__isnull=False,
+                    ),
+                ),
+            )
+            .order_by("-access_expires_at", "user__first_name", "user__username")
+        )
+        context["students"] = students
+        context["active_students_count"] = students.filter(
+            access_expires_at__isnull=False,
+            access_expires_at__gte=now,
+        ).count()
+        context["total_students_count"] = students.count()
+        return context
+
+
+class StaffStudentAuditView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/staff_student_audit.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        student = get_object_or_404(User, pk=kwargs["user_id"])
+        profile, _ = Profile.objects.get_or_create(user=student)
+        attempts = list(
+            ExamAttempt.objects.filter(student=student)
+            .select_related("template")
+            .order_by("-started_at")
+        )
+        for attempt in attempts:
+            check_and_expire_attempt(attempt)
+
+        context["audit_student"] = student
+        context["profile"] = profile
+        context["attempts"] = attempts
+        context["exam_progress"] = get_student_exam_progress(student)
+        context["access_expires_in_days"] = (
+            max(0, (profile.access_expires_at.date() - timezone.now().date()).days)
+            if profile.access_expires_at
+            else None
+        )
+        return context
 
 
 class CourseActivationView(PrivateAreaMixin, TemplateView):
@@ -607,13 +678,40 @@ class ExamAttemptDetailView(PrivateAreaMixin, DetailView):
         return context
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and not user_has_active_exam_access(request.user):
+        if (
+            request.user.is_authenticated
+            and not request.user.is_staff
+            and not user_has_active_exam_access(request.user)
+        ):
             messages.error(
                 request,
                 "Tu acceso al curso no esta activo. Ingresa tu codigo para continuar.",
             )
             return redirect("core_web:dashboard")
         return super().dispatch(request, *args, **kwargs)
+
+
+class StaffExamAuditDetailView(ExamAttemptDetailView):
+    def get_queryset(self):
+        return (
+            ExamAttempt.objects.all()
+            .select_related("student", "template")
+            .prefetch_related("exam_questions__answer")
+        )
+
+    def post(self, request, *args, **kwargs):
+        messages.error(request, "La vista de auditoria es solo lectura.")
+        return redirect("core_web:staff-exam-audit", pk=kwargs["pk"])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["audit_mode"] = True
+        context["audit_student"] = self.object.student
+        context["can_answer"] = False
+        context["can_repeat"] = False
+        context["show_feedback"] = True
+        context["remaining_minutes"] = None
+        return context
 
 
 class RepeatExamAttemptView(PrivateAreaMixin, View):

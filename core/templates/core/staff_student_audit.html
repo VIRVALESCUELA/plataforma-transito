@@ -1,0 +1,133 @@
+{% extends "core/base.html" %}
+{% block title %}Auditoria de alumno{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:staff-students' %}" class="btn btn-outline page-back-link">&larr; Volver a alumnos</a>
+
+<section class="card">
+    <h1 style="margin-top:0;">{{ audit_student.get_full_name|default:audit_student.username }}</h1>
+    <p class="meta" style="color:#455a64;">
+        Vista de auditoria solo lectura. Desde aqui puedes revisar avance y examenes sin entrar a la sesion del alumno.
+    </p>
+    <div class="exam-summary">
+        <div class="summary-card">
+            <span class="summary-label">Curso activo</span>
+            <span class="summary-value">{{ profile.activated_course_name|default:"Sin curso" }}</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Vence</span>
+            <span class="summary-value">
+                {% if profile.access_expires_at %}
+                    {{ profile.access_expires_at|date:"d/m/Y" }}
+                {% else %}
+                    &mdash;
+                {% endif %}
+            </span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Dias restantes</span>
+            <span class="summary-value">
+                {% if access_expires_in_days is not None %}
+                    {{ access_expires_in_days }}
+                {% else %}
+                    &mdash;
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-section" style="margin-top:1.5rem;">
+    <article class="card">
+        <h2 style="margin-top:0;">Avance del banco de preguntas</h2>
+        <div class="exam-summary">
+            <div class="summary-card">
+                <span class="summary-label">Cobertura</span>
+                <span class="summary-value">{{ exam_progress.coverage_percent }}%</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Rendimiento general</span>
+                <span class="summary-value">
+                    {% if exam_progress.general_percent is not None %}
+                        {{ exam_progress.general_percent }}%
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Falladas pendientes</span>
+                <span class="summary-value">{{ exam_progress.failed_pending_count }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Ultimos 5 examenes</span>
+                <span class="summary-value">
+                    {% if exam_progress.recent_average is not None %}
+                        {{ exam_progress.recent_average }}%
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-section" style="margin-top:1.5rem;">
+    <h2 style="margin-bottom:1rem;">Examenes del alumno</h2>
+    {% if attempts %}
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Plantilla</th>
+                        <th>Estado</th>
+                        <th>Inicio</th>
+                        <th>Finalizo</th>
+                        <th>Puntaje</th>
+                        <th>Accion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in attempts %}
+                        <tr>
+                            <td>{{ forloop.revcounter }}</td>
+                            <td>{{ attempt.template.name }}</td>
+                            <td>
+                                {% if attempt.status == 'ENTREGADO' %}
+                                    <span class="status-pill completed">Entregado</span>
+                                {% elif attempt.status == 'EXPIRADO' %}
+                                    <span class="status-pill expired">Expirado</span>
+                                {% else %}
+                                    <span class="status-pill in-progress">En curso</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if attempt.finished_at %}
+                                    {{ attempt.finished_at|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if attempt.score is not None %}
+                                    {{ attempt.score }}%
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="btn" href="{% url 'core_web:staff-exam-audit' attempt.pk %}">Ver detalle</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Este alumno no tiene examenes registrados todavia.</p>
+    {% endif %}
+</section>
+{% endblock %}

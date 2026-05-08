@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+{% block title %}Gestion de alumnos{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+
+<section class="card">
+    <h1 style="margin-top:0;">Gestion interna de alumnos</h1>
+    <p style="max-width: 760px;">
+        Revisa alumnos con acceso a plataforma, sus examenes realizados y entra al modo auditoria para resolver dudas sin modificar respuestas.
+    </p>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <div class="exam-summary">
+        <div class="summary-card">
+            <span class="summary-label">Alumnos registrados</span>
+            <span class="summary-value">{{ total_students_count }}</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Accesos activos</span>
+            <span class="summary-value">{{ active_students_count }}</span>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    {% if students %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alumno</th>
+                        <th>Curso</th>
+                        <th>Acceso</th>
+                        <th>Examenes</th>
+                        <th>Promedio</th>
+                        <th>Accion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in students %}
+                        <tr>
+                            <td>
+                                <strong>{{ profile.user.get_full_name|default:profile.user.username }}</strong><br>
+                                <span class="meta" style="color:#455a64;">{{ profile.user.email|default:"Sin correo" }}</span>
+                            </td>
+                            <td>{{ profile.activated_course_name|default:"Sin curso activo" }}</td>
+                            <td>
+                                {% if profile.has_active_exam_access %}
+                                    <span class="status-pill completed">Activo</span>
+                                {% elif profile.access_expires_at %}
+                                    <span class="status-pill expired">Vencido</span>
+                                {% else %}
+                                    <span class="status-pill in-progress">Sin activar</span>
+                                {% endif %}
+                                {% if profile.access_expires_at %}
+                                    <br><span class="meta" style="color:#455a64;">Vence {{ profile.access_expires_at|date:"d/m/Y" }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ profile.attempt_count }} total<br>
+                                <span class="meta" style="color:#455a64;">{{ profile.delivered_count }} entregados</span>
+                            </td>
+                            <td>
+                                {% if profile.average_score is not None %}
+                                    {{ profile.average_score|floatformat:1 }}%
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="btn" href="{% url 'core_web:staff-student-audit' profile.user.pk %}">Auditar</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay alumnos registrados todavia.</p>
+    {% endif %}
+</section>
+{% endblock %}

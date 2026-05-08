@@ -808,6 +808,54 @@ class InscripcionManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Abrir inscripciones pendientes")
+        self.assertContains(response, "Auditar alumnos")
+
+    def test_staff_can_view_student_audit_list_and_profile(self):
+        self.client.force_login(self.staff)
+
+        list_response = self.client.get(reverse("core_web:staff-students"))
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, "Gestion interna de alumnos")
+        self.assertContains(list_response, "Alumno")
+
+        detail_response = self.client.get(
+            reverse("core_web:staff-student-audit", args=[self.student.pk])
+        )
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "Vista de auditoria solo lectura")
+        self.assertContains(detail_response, "Examenes del alumno")
+
+    def test_staff_can_audit_exam_detail_without_answer_actions(self):
+        template = ExamTemplate.objects.create(
+            name="Examen auditoria",
+            total_questions=1,
+            duration_minutes=45,
+        )
+        attempt = ExamAttempt.objects.create(
+            student=self.student,
+            template=template,
+            status=ExamAttemptStatus.EN_CURSO,
+        )
+        ExamQuestion.objects.create(
+            attempt=attempt,
+            question_text="Pregunta auditada",
+            topic="Normas",
+            options=[
+                {"text": "Correcta", "is_correct": True},
+                {"text": "Incorrecta", "is_correct": False},
+            ],
+        )
+
+        self.client.force_login(self.staff)
+        response = self.client.get(
+            reverse("core_web:staff-exam-audit", args=[attempt.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Vista de auditoria")
+        self.assertContains(response, "Pregunta auditada")
+        self.assertNotContains(response, "Guardar progreso")
+        self.assertNotContains(response, "Finalizar y calificar")
 
 
 class AdminLabelsTests(TestCase):

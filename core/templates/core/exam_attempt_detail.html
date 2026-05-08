@@ -2,9 +2,19 @@
 {% block title %}Detalle del Examen{% endblock %}
 
 {% block content %}
-<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+{% if audit_mode %}
+    <a href="{% url 'core_web:staff-student-audit' audit_student.pk %}" class="btn btn-outline page-back-link">&larr; Volver al alumno</a>
+{% else %}
+    <a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+{% endif %}
 
 <section class="card" style="margin-bottom: 2rem;">
+    {% if audit_mode %}
+        <span class="pill" style="background:#fff3cd; color:#8a6d3b;">Vista de auditoria</span>
+        <p class="meta" style="color:#455a64;">
+            Estas revisando el examen de <strong>{{ audit_student.get_full_name|default:audit_student.username }}</strong>. Esta vista es solo lectura.
+        </p>
+    {% endif %}
     <h1 style="margin-top:0;">{{ attempt.template.name }}</h1>
     <p class="meta" style="color: #455a64;">
         Inicio: {{ attempt.started_at|date:"d/m/Y H:i" }}<br>
