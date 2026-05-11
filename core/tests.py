@@ -357,6 +357,24 @@ class ExamStudentFlowTests(TestCase):
         self.assertEqual(len(question_texts), 2)
         self.assertEqual(len(set(question_texts)), 2)
 
+    def test_generated_exam_keeps_admin_option_order(self):
+        self.question.options.all().delete()
+        Option.objects.create(question=self.question, text="Primera", is_correct=False)
+        Option.objects.create(question=self.question, text="Segunda", is_correct=True)
+        Option.objects.create(question=self.question, text="Tercera", is_correct=False)
+
+        attempt = generate_exam_attempt(self.student, self.template)
+
+        options = attempt.exam_questions.get().options
+        self.assertEqual(
+            [option["text"] for option in options],
+            ["Primera", "Segunda", "Tercera"],
+        )
+        self.assertEqual(
+            [index for index, option in enumerate(options) if option["is_correct"]],
+            [1],
+        )
+
     def test_selected_small_topic_is_completed_with_other_small_topics(self):
         self.template.total_questions = 3
         self.template.save(update_fields=["total_questions"])

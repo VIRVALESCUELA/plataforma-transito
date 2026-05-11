@@ -226,8 +226,7 @@ def generate_exam_attempt(student, template, topic=None):
     attempt = ExamAttempt.objects.create(student=student, template=template)
     selected = _select_practice_questions(pool, question_count, student)
     for q in selected:
-        opts = list(q.options.all())
-        random.shuffle(opts)
+        opts = list(q.options.order_by("id"))
         options_payload = [{"text": o.text, "is_correct": o.is_correct} for o in opts]
         ExamQuestion.objects.create(
             attempt=attempt,
