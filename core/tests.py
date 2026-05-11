@@ -334,6 +334,29 @@ class ExamStudentFlowTests(TestCase):
         self.assertEqual(attempt.exam_questions.count(), 1)
         self.assertEqual(attempt.exam_questions.first().topic, topic_normas.name)
 
+    def test_generated_exam_does_not_repeat_same_question_text(self):
+        self.template.total_questions = 2
+        self.template.save(update_fields=["total_questions"])
+        self.question.is_active = False
+        self.question.save(update_fields=["is_active"])
+
+        for index in range(2):
+            question = Question.objects.create(text="Pregunta duplicada")
+            Option.objects.create(question=question, text="Correcta", is_correct=True)
+            Option.objects.create(question=question, text="Incorrecta", is_correct=False)
+
+        unique_question = Question.objects.create(text="Pregunta unica")
+        Option.objects.create(question=unique_question, text="Correcta", is_correct=True)
+        Option.objects.create(question=unique_question, text="Incorrecta", is_correct=False)
+
+        attempt = generate_exam_attempt(self.student, self.template)
+
+        question_texts = list(
+            attempt.exam_questions.values_list("question_text", flat=True)
+        )
+        self.assertEqual(len(question_texts), 2)
+        self.assertEqual(len(set(question_texts)), 2)
+
     def test_selected_small_topic_is_completed_with_other_small_topics(self):
         self.template.total_questions = 3
         self.template.save(update_fields=["total_questions"])

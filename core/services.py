@@ -35,6 +35,14 @@ def _question_key_from_exam_question(exam_question):
     return ("text", exam_question.question_text.strip())
 
 
+def _normalized_question_text(text):
+    return " ".join((text or "").split()).casefold()
+
+
+def _unique_question_count(pool):
+    return len({_normalized_question_text(question.text) for question in pool})
+
+
 def _topic_name_from_exam_question(exam_question, known_topic_names=None):
     source_question = getattr(exam_question, "source_question", None)
     source_topic = getattr(source_question, "topic", None)
@@ -81,17 +89,35 @@ def _get_student_practice_state(student):
     }
 
 
-def _sample_without_repeating(pool, count, selected_ids):
-    available = [question for question in pool if question.id not in selected_ids]
+def _sample_without_repeating(pool, count, selected_ids, selected_texts):
+    available = [
+        question
+        for question in pool
+        if question.id not in selected_ids
+        and _normalized_question_text(question.text) not in selected_texts
+    ]
     if count <= 0 or not available:
         return []
-    return random.sample(available, k=min(count, len(available)))
+
+    shuffled = random.sample(available, k=len(available))
+    sample = []
+    sample_texts = set()
+    for question in shuffled:
+        text_key = _normalized_question_text(question.text)
+        if text_key in sample_texts:
+            continue
+        sample.append(question)
+        sample_texts.add(text_key)
+        if len(sample) == count:
+            break
+    return sample
 
 
 def _select_practice_questions(pool, question_count, student):
     state = _get_student_practice_state(student)
     selected = []
     selected_ids = set()
+    selected_texts = set()
 
     failed_ratio = (
         EARLY_FAILED_REVIEW_RATIO
@@ -107,26 +133,40 @@ def _select_practice_questions(pool, question_count, student):
         failed_pool,
         target_failed_count,
         selected_ids,
+        selected_texts,
     )
     selected.extend(failed_selection)
     selected_ids.update(question.id for question in failed_selection)
+    selected_texts.update(
+        _normalized_question_text(question.text) for question in failed_selection
+    )
 
     missing_count = question_count - len(selected)
     unseen_pool = [
         question
         for question in pool
         if question.id not in state["seen_source_ids"] and question.id not in selected_ids
+        and _normalized_question_text(question.text) not in selected_texts
     ]
     unseen_selection = _sample_without_repeating(
         unseen_pool,
         missing_count,
         selected_ids,
+        selected_texts,
     )
     selected.extend(unseen_selection)
     selected_ids.update(question.id for question in unseen_selection)
+    selected_texts.update(
+        _normalized_question_text(question.text) for question in unseen_selection
+    )
 
     missing_count = question_count - len(selected)
-    fill_selection = _sample_without_repeating(pool, missing_count, selected_ids)
+    fill_selection = _sample_without_repeating(
+        pool,
+        missing_count,
+        selected_ids,
+        selected_texts,
+    )
     selected.extend(fill_selection)
 
     random.shuffle(selected)
@@ -155,7 +195,7 @@ def generate_exam_attempt(student, template, topic=None):
     if topic is not None:
         if not pool:
             raise ValueError(f"No hay preguntas disponibles en el tema {topic.name}.")
-        if len(pool) < template.total_questions:
+        if _unique_question_count(pool) < template.total_questions:
             selected_ids = {question.id for question in pool}
             complementary_pool = list(
                 Question.objects.filter(
@@ -174,12 +214,13 @@ def generate_exam_attempt(student, template, topic=None):
                 .filter(active_topic_questions__lt=template.total_questions)
                 .distinct()
             )
-            missing_count = template.total_questions - len(pool)
-            pool.extend(random.sample(complementary_pool, k=min(missing_count, len(complementary_pool))))
-        question_count = min(template.total_questions, len(pool))
+            pool.extend(complementary_pool)
+        question_count = min(template.total_questions, _unique_question_count(pool))
     else:
-        if len(pool) < template.total_questions:
-            raise ValueError("No hay suficientes preguntas disponibles para generar el examen.")
+        if _unique_question_count(pool) < template.total_questions:
+            raise ValueError(
+                "No hay suficientes preguntas unicas disponibles para generar el examen."
+            )
         question_count = template.total_questions
 
     attempt = ExamAttempt.objects.create(student=student, template=template)
