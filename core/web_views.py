@@ -14,6 +14,7 @@ from django.views.decorators.cache import never_cache
 from django.views.generic import DetailView, FormView, TemplateView, View
 from urllib.parse import quote
 import secrets
+import unicodedata
 
 from .forms import ActivationCodeForm, InscripcionForm, StudentSignupForm
 from .models import (
@@ -38,6 +39,40 @@ from .services import (
 )
 
 User = get_user_model()
+
+TOPIC_MATERIAL_PATHS = {
+    "siniestros de transito": "core/materiales/capitulo-1.pdf",
+    "los principios de la conduccion": "core/materiales/capitulo-2.pdf",
+    "convivencia vial": "core/materiales/capitulo-3.pdf",
+    "la persona en el transito": "core/materiales/capitulo-4.pdf",
+    "la y los usuarios vulnerables": "core/materiales/capitulo-5.pdf",
+    "las y los usuarios vulnerables": "core/materiales/capitulo-5.pdf",
+    "normas de circulacion": "core/materiales/capitulo-6.pdf",
+    "conduccion en circunstancias especiales": "core/materiales/capitulo-7.pdf",
+    "conduccion eficiente": "core/materiales/capitulo-8.pdf",
+    "informaciones importantes": "core/materiales/capitulo-9.pdf",
+    "anexo-definiciones": "core/materiales/glosario.pdf",
+    "anexo definiciones": "core/materiales/glosario.pdf",
+}
+
+
+def _normalize_topic_name(name):
+    decomposed = unicodedata.normalize("NFKD", name or "")
+    without_accents = "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    )
+    return " ".join(without_accents.casefold().split())
+
+
+def add_material_paths_to_exam_progress(exam_progress):
+    if not exam_progress:
+        return exam_progress
+
+    for topic in exam_progress.get("topics", []):
+        topic["material_path"] = TOPIC_MATERIAL_PATHS.get(
+            _normalize_topic_name(topic.get("topic", ""))
+        )
+    return exam_progress
 
 
 class StudentSignupView(FormView):
@@ -447,7 +482,8 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             for attempt in attempts
             if attempt.status == ExamAttemptStatus.ENTREGADO and attempt.score is not None
         ]
-        context["exam_progress"] = get_student_exam_progress(self.request.user) if has_exam_access else None
+        exam_progress = get_student_exam_progress(self.request.user) if has_exam_access else None
+        context["exam_progress"] = add_material_paths_to_exam_progress(exam_progress)
         context["total_attempts"] = len(attempts)
         context["approved_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score >= 85)
         context["failed_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score < 85)

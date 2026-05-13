@@ -1,6 +1,25 @@
 {% extends "core/base.html" %}
 {% load static %}
 {% block title %}Panel de Pruebas{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <style>
+        .topic-material-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            color: var(--brand-blue);
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 2px solid rgba(30, 136, 229, 0.28);
+        }
+        .topic-material-link:hover,
+        .topic-material-link:focus {
+            color: #0d47a1;
+            border-bottom-color: currentColor;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
 <article class="card" style="margin-bottom: 2rem; background: #1f4b42; color: #fff; border: none;">
@@ -189,7 +208,19 @@
                     <tbody>
                         {% for topic in exam_progress.topics %}
                             <tr>
-                                <td>{{ topic.topic }}</td>
+                                <td>
+                                    {% if topic.material_path %}
+                                        <a
+                                            class="topic-material-link"
+                                            href="{% static topic.material_path %}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            title="Abrir material de estudio"
+                                        >{{ topic.topic }}</a>
+                                    {% else %}
+                                        {{ topic.topic }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ topic.percent }}%</td>
                                 <td>{{ topic.coverage_percent }}%</td>
                                 <td>{{ topic.answered }}</td>
