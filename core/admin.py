@@ -237,8 +237,25 @@ class ActivationCodeAdmin(admin.ModelAdmin):
 
 @admin.register(Inscripcion)
 class InscripcionAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "curso", "status", "correo", "telefono", "activation_code", "created_at")
-    search_fields = ("nombre", "correo", "telefono", "curso", "comuna")
+    list_display = (
+        "nombre",
+        "curso",
+        "status",
+        "correo",
+        "telefono",
+        "user",
+        "activation_code",
+        "created_at",
+    )
+    search_fields = (
+        "nombre",
+        "correo",
+        "telefono",
+        "curso",
+        "comuna",
+        "user__username",
+        "user__email",
+    )
     list_filter = ("curso", "comuna", "status")
 
 

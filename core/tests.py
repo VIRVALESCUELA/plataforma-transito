@@ -66,6 +66,48 @@ class PageVisitCounterTests(TestCase):
         self.assertContains(second_response, "Visitas a esta pagina: 2")
 
 
+class SignupInscripcionLinkTests(TestCase):
+    def test_signup_with_activation_code_links_inscripcion_and_activates_course(self):
+        activation = ActivationCode.objects.create(
+            code="CLASEB-LINK1",
+            course_name="Curso teorico",
+            duration_days=30,
+        )
+        inscripcion = Inscripcion.objects.create(
+            nombre="Ana Conductora",
+            comuna="Santiago",
+            correo="ana@example.com",
+            telefono="+56 9 1111 2222",
+            curso="Curso teorico",
+            status=Inscripcion.Status.MATRICULADO,
+            activation_code=activation,
+        )
+
+        response = self.client.post(
+            reverse("student_signup"),
+            {
+                "first_name": "",
+                "last_name": "",
+                "email": "ana@example.com",
+                "activation_code": "CLASEB-LINK1",
+                "password1": "strong-pass-123",
+                "password2": "strong-pass-123",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core_web:dashboard"))
+        user = get_user_model().objects.get(username="ana@example.com")
+        activation.refresh_from_db()
+        inscripcion.refresh_from_db()
+        profile = user.profile
+        self.assertEqual(inscripcion.user, user)
+        self.assertEqual(inscripcion.status, Inscripcion.Status.CURSO_ACTIVO)
+        self.assertEqual(activation.used_by, user)
+        self.assertTrue(profile.has_active_exam_access())
+        self.assertEqual(user.first_name, "Ana")
+        self.assertEqual(user.last_name, "Conductora")
+
+
 class InscripcionTests(TestCase):
     def test_inscripcion_creates_record_and_redirects_to_whatsapp(self):
         payload = {
@@ -499,17 +541,17 @@ class ActivationFlowTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn("acceso a examenes no esta activo", response.json()["detail"])
 
-    def test_signup_page_does_not_show_activation_field(self):
+    def test_signup_page_shows_optional_activation_field(self):
         response = self.client.get(reverse("student_signup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Codigo de activacion")
+        self.assertContains(response, "Codigo de activacion")
+        self.assertContains(response, "Opcional")
 
     def test_signup_accepts_six_character_password(self):
         response = self.client.post(
             reverse("student_signup"),
             {
-                "username": "clave-corta",
                 "first_name": "Clave",
                 "last_name": "Corta",
                 "email": "clave@example.com",
@@ -521,9 +563,9 @@ class ActivationFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
-            get_user_model().objects.filter(username="clave-corta").exists()
+            get_user_model().objects.filter(username="clave@example.com").exists()
         )
-        user = get_user_model().objects.get(username="clave-corta")
+        user = get_user_model().objects.get(username="clave@example.com")
         self.assertFalse(user.profile.has_active_exam_access())
 
 

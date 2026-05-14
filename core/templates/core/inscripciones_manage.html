@@ -36,6 +36,7 @@
                         <th>Curso</th>
                         <th>Contacto</th>
                         <th>Estado</th>
+                        <th>Cuenta</th>
                         <th>Codigo</th>
                         <th>Acciones</th>
                     </tr>
@@ -63,9 +64,22 @@
                                 </form>
                             </td>
                             <td>
+                                {% if inscripcion.user %}
+                                    <strong>{{ inscripcion.user.username }}</strong><br>
+                                    <span class="meta" style="color:#455a64;">Enlazada</span>
+                                {% elif inscripcion.requires_online_access %}
+                                    <span class="pill" style="background:#fff3cd; color:#8a6d3b;">Pendiente</span>
+                                {% else %}
+                                    <span class="pill">No requiere plataforma</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if inscripcion.activation_code %}
                                     <strong>{{ inscripcion.activation_code.code }}</strong><br>
                                     <span class="meta" style="color:#455a64;">{{ inscripcion.activation_code.course_name }}</span>
+                                    {% if inscripcion.activation_code.used_by %}
+                                        <br><span class="meta" style="color:#2e7d32;">Usado</span>
+                                    {% endif %}
                                 {% else %}
                                     &mdash;
                                 {% endif %}

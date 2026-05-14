@@ -85,10 +85,21 @@ class StudentSignupView(FormView):
     def form_valid(self, form):
         user = form.save()
         login(self.request, user)
-        messages.success(
-            self.request,
-            "Registro exitoso. Ahora ingresa tu codigo de activacion desde el panel para habilitar los examenes.",
-        )
+        if form.cleaned_data.get("activation_instance"):
+            messages.success(
+                self.request,
+                "Registro exitoso. Tu cuenta quedo enlazada y el curso fue activado.",
+            )
+        elif getattr(form, "linked_inscripcion", None):
+            messages.success(
+                self.request,
+                "Registro exitoso. Tu cuenta quedo enlazada a tu inscripcion.",
+            )
+        else:
+            messages.success(
+                self.request,
+                "Registro exitoso. Ahora ingresa tu codigo de activacion desde el panel para habilitar los examenes.",
+            )
         return super().form_valid(form)
 
 class InscripcionCreateView(FormView):
@@ -230,7 +241,7 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             },
         ]
         context["inscripciones"] = (
-            Inscripcion.objects.select_related("activation_code")
+            Inscripcion.objects.select_related("activation_code", "user")
             .order_by("-created_at")
         )
         return context
@@ -363,6 +374,20 @@ class CourseActivationView(PrivateAreaMixin, TemplateView):
         activation.used_by = self.request.user
         activation.used_at = now
         activation.save(update_fields=["used_by", "used_at"])
+        inscripcion = getattr(activation, "inscripcion", None)
+        if inscripcion is None:
+            inscripcion = (
+                Inscripcion.objects.filter(
+                    correo__iexact=self.request.user.email,
+                    user__isnull=True,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+        if inscripcion is not None:
+            inscripcion.user = self.request.user
+            inscripcion.status = Inscripcion.Status.CURSO_ACTIVO
+            inscripcion.save(update_fields=["user", "status"])
         return activation, profile
 
     def get_context_data(self, **kwargs):
@@ -370,7 +395,9 @@ class CourseActivationView(PrivateAreaMixin, TemplateView):
         profile = self._get_profile()
         context["profile"] = profile
         context["has_exam_access"] = profile.has_active_exam_access()
-        context["activation_form"] = kwargs.get("activation_form", ActivationCodeForm())
+        context["activation_form"] = kwargs.get(
+            "activation_form", ActivationCodeForm(user=self.request.user)
+        )
         context["access_expires_in_days"] = (
             max(0, (profile.access_expires_at.date() - timezone.now().date()).days)
             if profile.access_expires_at
@@ -379,7 +406,7 @@ class CourseActivationView(PrivateAreaMixin, TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
-        form = ActivationCodeForm(request.POST)
+        form = ActivationCodeForm(request.POST, user=request.user)
         if form.is_valid():
             activation, _profile = self._activate_code(
                 form.cleaned_data["activation_instance"].code
@@ -517,7 +544,9 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
         context["student"] = self.request.user
         context["profile"] = profile
         context["has_exam_access"] = has_exam_access
-        context["activation_form"] = kwargs.get("activation_form", ActivationCodeForm())
+        context["activation_form"] = kwargs.get(
+            "activation_form", ActivationCodeForm(user=self.request.user)
+        )
         context["access_expires_in_days"] = (
             max(0, (profile.access_expires_at.date() - timezone.now().date()).days)
             if profile.access_expires_at

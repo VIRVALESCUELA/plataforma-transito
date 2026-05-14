@@ -48,7 +48,10 @@ class Inscripcion(models.Model):
     class Status(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"
         CONTACTADO = "CONTACTADO", "Contactado"
+        CLIENTE = "CLIENTE", "Cliente sin plataforma"
         MATRICULADO = "MATRICULADO", "Matriculado"
+        CUENTA_CREADA = "CUENTA_CREADA", "Cuenta creada"
+        CURSO_ACTIVO = "CURSO_ACTIVO", "Curso activo"
         DESCARTADO = "DESCARTADO", "Descartado"
 
     nombre = models.CharField(max_length=150)
@@ -67,12 +70,25 @@ class Inscripcion(models.Model):
         null=True,
         blank=True,
     )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inscripcion",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Solicitud de inscripcion"
         verbose_name_plural = "Solicitudes de inscripcion"
+
+    @property
+    def requires_online_access(self):
+        course_name = (self.curso or "").casefold()
+        online_keywords = ("teorico", "teórico", "instagram")
+        return any(keyword in course_name for keyword in online_keywords)
 
 
 class PageVisitCounter(models.Model):
