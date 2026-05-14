@@ -3,6 +3,7 @@ import tempfile
 from datetime import timedelta
 
 from django.core.management import call_command
+from django.core import mail
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -899,6 +900,10 @@ class InscripcionManagementTests(TestCase):
         self.assertIsNotNone(self.inscripcion.activation_code)
         self.assertTrue(self.inscripcion.activation_code.code.startswith("CLASEB-"))
         self.assertEqual(self.inscripcion.activation_code.course_name, "Clase B")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["sucursal@example.com"])
+        self.assertIn(self.inscripcion.activation_code.code, mail.outbox[0].body)
+        self.assertIn("Instrucciones", mail.outbox[0].body)
 
     def test_staff_dashboard_shows_link_to_management_view(self):
         self.client.force_login(self.staff)

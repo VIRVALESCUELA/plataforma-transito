@@ -1,7 +1,10 @@
 import random
+import logging
 from collections import defaultdict
 from datetime import timedelta
 
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -15,9 +18,52 @@ from .models import (
     StudentAnswer,
 )
 
+logger = logging.getLogger(__name__)
+
 EARLY_EXAM_LIMIT = 18
 EARLY_FAILED_REVIEW_RATIO = 0.2
 LATE_FAILED_REVIEW_RATIO = 0.5
+
+
+def send_activation_code_email(inscripcion, activation, activation_url=None):
+    subject = "Tu codigo de activacion Virval"
+    course_name = activation.course_name or "Curso teorico"
+    access_days = activation.duration_days
+    student_name = inscripcion.nombre or "Alumno"
+    activate_step = (
+        f"1. Ingresa a {activation_url}."
+        if activation_url
+        else "1. Ingresa a la zona de alumnos de Virval."
+    )
+    message = (
+        f"Hola {student_name},\n\n"
+        "Tu codigo de activacion para la plataforma Virval es:\n\n"
+        f"{activation.code}\n\n"
+        f"Curso: {course_name}\n"
+        f"Duracion de acceso: {access_days} dias desde la activacion.\n\n"
+        "Instrucciones:\n"
+        f"{activate_step}\n"
+        "2. Crea tu cuenta usando este mismo correo, o inicia sesion si ya tienes una.\n"
+        "3. Ingresa el codigo de activacion desde tu panel de alumno.\n"
+        "4. Una vez activado, podras practicar examenes y revisar tu progreso.\n\n"
+        "Si tienes dudas, responde este correo o contacta a Escuela Virval.\n"
+    )
+
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [inscripcion.correo],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo enviar el codigo de activacion a inscripcion %s.",
+            inscripcion.pk,
+        )
+        return False
+    return True
 
 
 def user_has_active_exam_access(user):

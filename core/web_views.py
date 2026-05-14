@@ -8,7 +8,7 @@ from django.db import DatabaseError
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
@@ -37,6 +37,7 @@ from .services import (
     grade_attempt,
     grade_single_answer,
     repeat_exam_attempt,
+    send_activation_code_email,
     user_has_active_exam_access,
 )
 
@@ -262,10 +263,28 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
                 if inscripcion.status == Inscripcion.Status.PENDIENTE:
                     inscripcion.status = Inscripcion.Status.CONTACTADO
                 inscripcion.save(update_fields=["activation_code", "status"])
+                activation_url = request.build_absolute_uri(
+                    reverse("core_web:alumnos")
+                )
+                email_sent = send_activation_code_email(
+                    inscripcion,
+                    activation,
+                    activation_url=activation_url,
+                )
                 messages.success(
                     request,
                     f"Codigo {activation.code} generado para {inscripcion.nombre}.",
                 )
+                if email_sent:
+                    messages.success(
+                        request,
+                        f"Correo enviado a {inscripcion.correo}.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "El codigo fue generado, pero no se pudo enviar el correo automaticamente.",
+                    )
             else:
                 messages.info(
                     request,
