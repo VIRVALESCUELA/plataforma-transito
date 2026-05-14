@@ -17,9 +17,11 @@
         <a class="btn-ghost" href="{% url 'student_signup' %}">Crear cuenta</a>
         
     </div>
-    <p style="margin:1rem 0 0; color:#f4efe3; font-weight:700;">
-        Visitas a esta pagina: {{ visit_count }}
-    </p>
+    {% if visit_count %}
+        <p style="margin:1rem 0 0; color:#f4efe3; font-weight:700;">
+            Visitas a esta pagina: {{ visit_count }}
+        </p>
+    {% endif %}
 </section>
 
 <section style="margin-top: 2rem;">

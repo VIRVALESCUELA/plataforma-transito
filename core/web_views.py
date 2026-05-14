@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db import DatabaseError
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -134,10 +135,13 @@ class StudentsLandingView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        counter, _ = PageVisitCounter.objects.get_or_create(page="alumnos")
-        PageVisitCounter.objects.filter(pk=counter.pk).update(total=F("total") + 1)
-        counter.refresh_from_db(fields=["total"])
-        context["visit_count"] = counter.total
+        try:
+            counter, _ = PageVisitCounter.objects.get_or_create(page="alumnos")
+            PageVisitCounter.objects.filter(pk=counter.pk).update(total=F("total") + 1)
+            counter.refresh_from_db(fields=["total"])
+            context["visit_count"] = counter.total
+        except DatabaseError:
+            context["visit_count"] = None
         return context
 
 class BlogView(TemplateView):
