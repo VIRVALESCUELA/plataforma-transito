@@ -9,6 +9,7 @@ from .models import (
     ExamTemplate,
     Inscripcion,
     Option,
+    PageVisitCounter,
     Profile,
     Question,
     StudentAnswer,
@@ -239,3 +240,10 @@ class InscripcionAdmin(admin.ModelAdmin):
     list_display = ("nombre", "curso", "status", "correo", "telefono", "activation_code", "created_at")
     search_fields = ("nombre", "correo", "telefono", "curso", "comuna")
     list_filter = ("curso", "comuna", "status")
+
+
+@admin.register(PageVisitCounter)
+class PageVisitCounterAdmin(admin.ModelAdmin):
+    list_display = ("page", "total", "updated_at")
+    readonly_fields = ("updated_at",)
+    search_fields = ("page",)

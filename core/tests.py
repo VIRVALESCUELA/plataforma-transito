@@ -16,6 +16,7 @@ from .models import (
     ExamTemplate,
     Inscripcion,
     Option,
+    PageVisitCounter,
     Profile,
     Question,
     StudentAnswer,
@@ -49,6 +50,20 @@ class AuthFlowTests(TestCase):
         self.assertEqual(follow_response.status_code, 302)
         self.assertIn(reverse("login"), follow_response.headers["Location"])
         self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class PageVisitCounterTests(TestCase):
+    def test_students_page_increments_visit_counter(self):
+        url = reverse("core_web:alumnos")
+
+        first_response = self.client.get(url)
+        second_response = self.client.get(url)
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+        counter = PageVisitCounter.objects.get(page="alumnos")
+        self.assertEqual(counter.total, 2)
+        self.assertContains(second_response, "Visitas a esta pagina: 2")
 
 
 class InscripcionTests(TestCase):

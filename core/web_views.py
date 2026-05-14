@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, F, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -23,6 +23,7 @@ from .models import (
     ExamAttemptStatus,
     ExamTemplate,
     Inscripcion,
+    PageVisitCounter,
     Profile,
     Topic,
     UserRole,
@@ -130,6 +131,14 @@ class LandingView(TemplateView):
 
 class StudentsLandingView(TemplateView):
     template_name = "core/alumnos.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        counter, _ = PageVisitCounter.objects.get_or_create(page="alumnos")
+        PageVisitCounter.objects.filter(pk=counter.pk).update(total=F("total") + 1)
+        counter.refresh_from_db(fields=["total"])
+        context["visit_count"] = counter.total
+        return context
 
 class BlogView(TemplateView):
     template_name = "core/blog.html"

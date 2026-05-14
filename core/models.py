@@ -74,6 +74,21 @@ class Inscripcion(models.Model):
         verbose_name = "Solicitud de inscripcion"
         verbose_name_plural = "Solicitudes de inscripcion"
 
+
+class PageVisitCounter(models.Model):
+    page = models.CharField(max_length=120, unique=True)
+    total = models.PositiveBigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["page"]
+        verbose_name = "Contador de visitas"
+        verbose_name_plural = "Contadores de visitas"
+
+    def __str__(self):
+        return f"{self.page}: {self.total}"
+
+
 class Topic(models.Model):
     name = models.CharField(max_length=120, unique=True)
     description = models.TextField(blank=True)
