@@ -34,11 +34,12 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
         }
         .brand-logo {
-            height: 64px;
-            width: auto;
-            border-radius: 12px;
-            background: #fff;
-            padding: 0.35rem;
+            height: 72px;
+            width: 72px;
+            border-radius: 50%;
+            object-fit: contain;
+            background: transparent;
+            padding: 0;
         }
         .site-header .brand {
             display: flex;
@@ -462,7 +463,8 @@
                 gap: 1rem;
             }
             .brand-logo {
-                height: 54px;
+                height: 58px;
+                width: 58px;
             }
             .site-header .brand-title {
                 font-size: 1.35rem;
@@ -548,7 +550,7 @@
 </head>
 <body>
     <header class="site-header">
-        <img class="brand-logo" src="{% static 'core/logo2.png' %}" alt="Logo Virval">
+        <img class="brand-logo" src="{% static 'core/logo2.png' %}?v=2" alt="Logo Virval">
         <div class="brand">
             <span class="brand-title">Virval</span>
             <span class="brand-subtitle">Escuela de conductores</span>

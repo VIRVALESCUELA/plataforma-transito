@@ -5,3 +5,5 @@ db.sqlite3.backup-*
 staticfiles/
 __pycache__/
 *.pyc
+core/static/core/autofavitransparente.png
+core/static/core/autofavicon.png
