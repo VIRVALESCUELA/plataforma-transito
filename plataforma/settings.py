@@ -227,6 +227,10 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     "Escuela Virval <escuelavirval.grecia@gmail.com>",
 )
+INSCRIPCION_NOTIFICATION_EMAIL = os.getenv(
+    "INSCRIPCION_NOTIFICATION_EMAIL",
+    "virvalescuela@gmail.com",
+)
 
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG

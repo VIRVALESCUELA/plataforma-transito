@@ -66,6 +66,42 @@ def send_activation_code_email(inscripcion, activation, activation_url=None):
     return True
 
 
+def send_inscripcion_notification_email(inscripcion):
+    recipient = getattr(
+        settings,
+        "INSCRIPCION_NOTIFICATION_EMAIL",
+        "virvalescuela@gmail.com",
+    )
+    curso = inscripcion.curso or "No especificado"
+    subject = f"Nueva solicitud de inscripcion Virval - {curso}"
+    message = (
+        "Nueva solicitud de inscripcion de curso:\n\n"
+        f"Nombre: {inscripcion.nombre}\n"
+        f"Comuna: {inscripcion.comuna}\n"
+        f"Correo: {inscripcion.correo}\n"
+        f"Telefono: {inscripcion.telefono}\n"
+        f"Curso: {curso}\n"
+        f"ID solicitud: {inscripcion.pk}\n"
+        f"Fecha: {timezone.localtime(inscripcion.created_at).strftime('%d/%m/%Y %H:%M')}\n"
+    )
+
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo enviar la alerta de inscripcion %s.",
+            inscripcion.pk,
+        )
+        return False
+    return True
+
+
 def user_has_active_exam_access(user):
     if user is None or not getattr(user, "is_authenticated", False):
         return False

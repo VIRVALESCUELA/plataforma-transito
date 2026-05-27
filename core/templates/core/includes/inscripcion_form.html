@@ -36,3 +36,22 @@
         <button type="submit" class="btn-primary">Enviar solicitud</button>
     </div>
 </form>
+<script>
+    (function () {
+        var forms = document.querySelectorAll(".course-form");
+        forms.forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (form.dataset.submitted === "true") {
+                    event.preventDefault();
+                    return;
+                }
+                form.dataset.submitted = "true";
+                var submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = "Enviando...";
+                }
+            });
+        });
+    })();
+</script>

@@ -124,6 +124,30 @@ class InscripcionTests(TestCase):
         self.assertTrue(
             Inscripcion.objects.filter(nombre="Test Alumno", correo="test@example.com").exists()
         )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["virvalescuela@gmail.com"])
+        self.assertIn("Test Alumno", mail.outbox[0].body)
+        self.assertIn("Curso base mecanico", mail.outbox[0].body)
+
+    def test_duplicate_inscripcion_post_reuses_recent_record(self):
+        payload = {
+            "nombre": "Test Alumno",
+            "comuna": "Santiago",
+            "correo": "test@example.com",
+            "telefono": "+56 9 1234 5678",
+            "curso": "Curso base mecanico",
+        }
+
+        first_response = self.client.post(reverse("core_web:inscripcion"), payload)
+        second_response = self.client.post(reverse("core_web:inscripcion"), payload)
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(
+            Inscripcion.objects.filter(nombre="Test Alumno", correo="test@example.com").count(),
+            1,
+        )
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_inscripcion_prefills_course_from_querystring(self):
         response = self.client.get(

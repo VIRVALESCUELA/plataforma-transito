@@ -38,6 +38,7 @@ from .services import (
     grade_single_answer,
     repeat_exam_attempt,
     send_activation_code_email,
+    send_inscripcion_notification_email,
     user_has_active_exam_access,
 )
 
@@ -107,6 +108,7 @@ class InscripcionCreateView(FormView):
     template_name = "core/inscripcion_form.html"
     form_class = InscripcionForm
     success_url = reverse_lazy("core_web:inscripcion")
+    duplicate_window = timedelta(minutes=10)
 
     def get_initial(self):
         initial = super().get_initial()
@@ -115,10 +117,31 @@ class InscripcionCreateView(FormView):
             initial["curso"] = curso
         return initial
 
+    def _get_recent_duplicate(self, form):
+        data = form.cleaned_data
+        threshold = timezone.now() - self.duplicate_window
+        return (
+            Inscripcion.objects.filter(
+                nombre__iexact=data["nombre"].strip(),
+                comuna__iexact=data["comuna"].strip(),
+                correo__iexact=data["correo"].strip(),
+                telefono=data["telefono"].strip(),
+                curso=data.get("curso") or "",
+                created_at__gte=threshold,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
     def form_valid(self, form):
         # Aseguramos persistencia antes de redirigir a WhatsApp.
         with transaction.atomic():
-            inscripcion = form.save()
+            inscripcion = self._get_recent_duplicate(form)
+            created = inscripcion is None
+            if created:
+                inscripcion = form.save()
+        if created:
+            send_inscripcion_notification_email(inscripcion)
         messages.success(self.request, "Hemos recibido tu solicitud. Te contactaremos pronto.")
 
         # Numero fijo para recibir la inscripcion por WhatsApp
