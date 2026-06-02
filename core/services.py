@@ -10,9 +10,11 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from .models import (
+    ActivationCode,
     ExamAttempt,
     ExamAttemptStatus,
     ExamQuestion,
+    Inscripcion,
     Profile,
     Question,
     StudentAnswer,
@@ -109,6 +111,58 @@ def user_has_active_exam_access(user):
     if profile is None:
         profile, _ = Profile.objects.get_or_create(user=user)
     return profile.has_active_exam_access()
+
+
+@transaction.atomic
+def activate_code_for_user(user, activation):
+    if not isinstance(activation, ActivationCode):
+        activation = ActivationCode.objects.get(pk=activation)
+
+    activation = ActivationCode.objects.select_for_update().get(pk=activation.pk)
+    profile, _ = Profile.objects.select_for_update().get_or_create(user=user)
+    now = timezone.now()
+    base_expires_at = (
+        profile.access_expires_at
+        if profile.access_expires_at and profile.access_expires_at > now
+        else now
+    )
+
+    profile.access_activated_at = now
+    profile.access_expires_at = base_expires_at + timedelta(days=activation.duration_days)
+    profile.activated_course_name = activation.course_name
+    profile.save(
+        update_fields=[
+            "access_activated_at",
+            "access_expires_at",
+            "activated_course_name",
+        ]
+    )
+
+    activation.used_by = user
+    activation.used_at = now
+    activation.save(update_fields=["used_by", "used_at"])
+
+    inscripcion = getattr(activation, "inscripcion", None)
+    if inscripcion is None:
+        inscripcion = (
+            Inscripcion.objects.filter(
+                correo__iexact=user.email,
+                user__isnull=True,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+    if inscripcion is not None:
+        user_already_linked = Inscripcion.objects.filter(user=user).exclude(
+            pk=inscripcion.pk
+        ).exists()
+        if not user_already_linked:
+            inscripcion.user = user
+        inscripcion.status = Inscripcion.Status.CURSO_ACTIVO
+        update_fields = ["status"] if user_already_linked else ["user", "status"]
+        inscripcion.save(update_fields=update_fields)
+
+    return activation, profile
 
 
 def _question_key_from_exam_question(exam_question):

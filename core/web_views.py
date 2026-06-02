@@ -4,6 +4,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.conf import settings
 from django.db import DatabaseError
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q
@@ -30,6 +34,7 @@ from .models import (
     UserRole,
 )
 from .services import (
+    activate_code_for_user,
     check_and_expire_attempt,
     generate_exam_attempt,
     get_remaining_seconds,
@@ -231,6 +236,20 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             if not ActivationCode.objects.filter(code=code).exists():
                 return code
 
+    def _get_inscripcion_user(self, inscripcion):
+        if inscripcion.user_id:
+            return inscripcion.user
+
+        email = (inscripcion.correo or "").strip()
+        if not email:
+            return None
+
+        return (
+            User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email))
+            .order_by("id")
+            .first()
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.now()
@@ -315,6 +334,38 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
                 )
             return redirect("core_web:manage-inscripciones")
 
+        if action == "add_30_days":
+            student = self._get_inscripcion_user(inscripcion)
+            if student is None:
+                messages.error(
+                    request,
+                    "No existe una cuenta de alumno con el correo de esta inscripcion.",
+                )
+                return redirect("core_web:manage-inscripciones")
+
+            activation = inscripcion.activation_code
+            if (
+                activation is None
+                or activation.used_by_id is not None
+                or not activation.is_enabled
+            ):
+                activation = ActivationCode.objects.create(
+                    code=self._build_code(),
+                    course_name="Clase B",
+                    duration_days=30,
+                    is_enabled=True,
+                )
+
+            activation, profile = activate_code_for_user(student, activation)
+            messages.success(
+                request,
+                (
+                    f"Se agregaron {activation.duration_days} dias a {student.email or student.username}. "
+                    f"Nuevo vencimiento: {timezone.localtime(profile.access_expires_at).strftime('%d/%m/%Y')}."
+                ),
+            )
+            return redirect("core_web:manage-inscripciones")
+
         if action == "update_status":
             new_status = request.POST.get("status")
             if new_status not in Inscripcion.Status.values:
@@ -330,6 +381,127 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
 
         messages.error(request, "Accion no reconocida.")
         return redirect("core_web:manage-inscripciones")
+
+
+class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/free_activation_codes.html"
+
+    def _build_code(self, prefix="LIBRE"):
+        prefix = prefix.strip().upper().replace(" ", "") or "LIBRE"
+        while True:
+            code = f"{prefix}-{secrets.token_hex(3).upper()}"
+            if not ActivationCode.objects.filter(code=code).exists():
+                return code
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["available_codes_count"] = ActivationCode.objects.filter(
+            is_enabled=True,
+            used_by__isnull=True,
+            course_name="Clase B",
+        ).count()
+        context["generated_codes"] = kwargs.get("generated_codes", [])
+        context["form_values"] = kwargs.get(
+            "form_values",
+            {
+                "count": 10,
+                "days": 30,
+                "prefix": "LIBRE",
+                "course_name": "Clase B",
+                "recipient_email": "",
+            },
+        )
+        return context
+
+    def _send_codes_email(self, recipient_email, generated_codes):
+        first_code = generated_codes[0]
+        subject = f"Codigos de acceso Virval - {first_code.course_name or 'Curso'}"
+        codes_text = "\n".join(activation.code for activation in generated_codes)
+        message = (
+            "Hola,\n\n"
+            "Te enviamos los codigos de activacion solicitados para acceso a la plataforma Virval.\n\n"
+            f"Curso: {first_code.course_name or 'General'}\n"
+            f"Duracion por codigo: {first_code.duration_days} dias\n\n"
+            "Codigos:\n"
+            f"{codes_text}\n\n"
+            "Cada codigo puede usarse una sola vez. Si la cuenta ya tiene acceso activo, "
+            "los dias se suman a su fecha actual de vencimiento.\n\n"
+            "Saludos,\n"
+            "Escuela Virval\n"
+        )
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient_email],
+            fail_silently=False,
+        )
+
+    def post(self, request, *args, **kwargs):
+        try:
+            count = int(request.POST.get("count", 10))
+            days = int(request.POST.get("days", 30))
+        except ValueError:
+            messages.error(request, "La cantidad y los dias deben ser numeros validos.")
+            return self.render_to_response(self.get_context_data())
+
+        prefix = (request.POST.get("prefix") or "LIBRE").strip().upper().replace(" ", "")
+        course_name = (request.POST.get("course_name") or "Clase B").strip()
+        recipient_email = (request.POST.get("recipient_email") or "").strip().lower()
+        form_values = {
+            "count": count,
+            "days": days,
+            "prefix": prefix or "LIBRE",
+            "course_name": course_name,
+            "recipient_email": recipient_email,
+        }
+
+        if count < 1 or count > 100:
+            messages.error(request, "Puedes generar entre 1 y 100 codigos por vez.")
+            return self.render_to_response(self.get_context_data(form_values=form_values))
+        if days < 1 or days > 365:
+            messages.error(request, "Los dias deben estar entre 1 y 365.")
+            return self.render_to_response(self.get_context_data(form_values=form_values))
+        if recipient_email:
+            try:
+                validate_email(recipient_email)
+            except ValidationError:
+                messages.error(request, "Ingresa un correo valido para enviar el lote.")
+                return self.render_to_response(self.get_context_data(form_values=form_values))
+
+        generated_codes = []
+        with transaction.atomic():
+            for _index in range(count):
+                activation = ActivationCode.objects.create(
+                    code=self._build_code(prefix),
+                    course_name=course_name,
+                    duration_days=days,
+                    is_enabled=True,
+                )
+                generated_codes.append(activation)
+
+        messages.success(request, f"Se generaron {len(generated_codes)} codigos libres.")
+        if recipient_email:
+            if settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+                messages.warning(
+                    request,
+                    "Los codigos fueron creados, pero el correo esta en modo consola y no se envia a Gmail.",
+                )
+            else:
+                try:
+                    self._send_codes_email(recipient_email, generated_codes)
+                    messages.success(request, f"Lote enviado a {recipient_email}.")
+                except Exception:
+                    messages.warning(
+                        request,
+                        "Los codigos fueron creados, pero no se pudo enviar el correo automaticamente.",
+                    )
+        return self.render_to_response(
+            self.get_context_data(
+                generated_codes=generated_codes,
+                form_values=form_values,
+            )
+        )
 
 
 class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
@@ -405,32 +577,7 @@ class CourseActivationView(PrivateAreaMixin, TemplateView):
 
     def _activate_code(self, code):
         activation = ActivationCode.objects.get(code=code)
-        profile = self._get_profile()
-        now = timezone.now()
-        profile.access_activated_at = now
-        profile.access_expires_at = now + timedelta(days=activation.duration_days)
-        profile.activated_course_name = activation.course_name
-        profile.save(
-            update_fields=["access_activated_at", "access_expires_at", "activated_course_name"]
-        )
-        activation.used_by = self.request.user
-        activation.used_at = now
-        activation.save(update_fields=["used_by", "used_at"])
-        inscripcion = getattr(activation, "inscripcion", None)
-        if inscripcion is None:
-            inscripcion = (
-                Inscripcion.objects.filter(
-                    correo__iexact=self.request.user.email,
-                    user__isnull=True,
-                )
-                .order_by("-created_at")
-                .first()
-            )
-        if inscripcion is not None:
-            inscripcion.user = self.request.user
-            inscripcion.status = Inscripcion.Status.CURSO_ACTIVO
-            inscripcion.save(update_fields=["user", "status"])
-        return activation, profile
+        return activate_code_for_user(self.request.user, activation)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -455,7 +602,7 @@ class CourseActivationView(PrivateAreaMixin, TemplateView):
             )
             messages.success(
                 request,
-                f"Codigo activado correctamente. Tienes {activation.duration_days} dias de acceso a los examenes.",
+                f"Codigo activado correctamente. Se agregaron {activation.duration_days} dias de acceso a tus examenes.",
             )
             return redirect("core_web:dashboard")
 
@@ -475,17 +622,7 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
 
     def _activate_code(self, code):
         activation = ActivationCode.objects.get(code=code)
-        profile = self._get_profile()
-        now = timezone.now()
-        profile.access_activated_at = now
-        profile.access_expires_at = now + timedelta(days=activation.duration_days)
-        profile.activated_course_name = activation.course_name
-        profile.save(
-            update_fields=["access_activated_at", "access_expires_at", "activated_course_name"]
-        )
-        activation.used_by = self.request.user
-        activation.used_at = now
-        activation.save(update_fields=["used_by", "used_at"])
+        _activation, profile = activate_code_for_user(self.request.user, activation)
         return profile
 
     def _get_attempts(self):

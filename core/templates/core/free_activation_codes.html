@@ -1,0 +1,89 @@
+{% extends "core/base.html" %}
+{% block title %}Codigos libres{% endblock %}
+
+{% block content %}
+<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+
+<section class="card">
+    <h1 style="margin-top:0;">Codigos libres</h1>
+    <p style="max-width: 760px;">
+        Genera codigos de activacion sin correo asociado. Cada codigo puede usarse una sola vez y agrega dias al acceso vigente del alumno.
+    </p>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <div class="exam-summary">
+        <div class="summary-card">
+            <span class="summary-label">Disponibles Clase B</span>
+            <span class="summary-value">{{ available_codes_count }}</span>
+            <span class="pill" style="margin-top: 0.85rem; background:#e3f2fd; color:#0d47a1;">
+                Sin usar
+            </span>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <article class="card">
+        <h2 style="margin-top: 0;">Generar lote</h2>
+        <form method="post" style="display:grid; gap:1rem; max-width:720px;">
+            {% csrf_token %}
+            <div style="display:grid; gap:1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+                <label>
+                    Cantidad
+                    <input type="number" name="count" min="1" max="100" value="{{ form_values.count }}" required>
+                </label>
+                <label>
+                    Dias
+                    <input type="number" name="days" min="1" max="365" value="{{ form_values.days }}" required>
+                </label>
+                <label>
+                    Prefijo
+                    <input type="text" name="prefix" maxlength="20" value="{{ form_values.prefix }}" required>
+                </label>
+                <label>
+                    Curso
+                    <input type="text" name="course_name" maxlength="120" value="{{ form_values.course_name }}" required>
+                </label>
+                <label>
+                    Correo externo
+                    <input type="email" name="recipient_email" maxlength="254" value="{{ form_values.recipient_email }}" placeholder="correo@escuela.cl">
+                </label>
+            </div>
+            <div>
+                <button class="btn" type="submit">Crear codigos libres</button>
+            </div>
+        </form>
+    </article>
+</section>
+
+{% if generated_codes %}
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <article class="card">
+        <h2 style="margin-top: 0;">Codigos generados</h2>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Curso</th>
+                        <th>Dias</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activation in generated_codes %}
+                        <tr>
+                            <td><strong>{{ activation.code }}</strong></td>
+                            <td>{{ activation.course_name }}</td>
+                            <td>{{ activation.duration_days }}</td>
+                            <td><span class="pill" style="background:#e8f5e9; color:#1b5e20;">Libre</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endif %}
+{% endblock %}

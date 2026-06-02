@@ -29,7 +29,7 @@ class ActivationCode(models.Model):
     course_name = models.CharField(max_length=120, blank=True)
     duration_days = models.PositiveIntegerField(default=30)
     is_enabled = models.BooleanField(default=True)
-    used_by = models.OneToOneField(
+    used_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,

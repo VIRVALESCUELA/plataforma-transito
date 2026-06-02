@@ -87,6 +87,12 @@
                             <td>
                                 {% if inscripcion.activation_code %}
                                     <span class="pill">Codigo generado</span>
+                                    <form method="post" style="margin-top: 0.65rem;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="add_30_days">
+                                        <input type="hidden" name="inscripcion_id" value="{{ inscripcion.id }}">
+                                        <button class="btn btn-outline" type="submit">Añadir 30 dias</button>
+                                    </form>
                                 {% else %}
                                     <form method="post">
                                         {% csrf_token %}

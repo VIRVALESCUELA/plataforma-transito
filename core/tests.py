@@ -556,6 +556,56 @@ class ActivationFlowTests(TestCase):
         self.assertContains(response, "30 dias de acceso")
         self.assertContains(response, "Plantillas disponibles")
 
+    def test_activation_extends_active_access_without_resetting_progress(self):
+        first_expiration = timezone.now() + timedelta(days=12)
+        profile, _ = Profile.objects.get_or_create(user=self.user)
+        profile.access_activated_at = timezone.now() - timedelta(days=5)
+        profile.access_expires_at = first_expiration
+        profile.activated_course_name = "Curso teorico clase B"
+        profile.save()
+        attempt = ExamAttempt.objects.create(
+            student=self.user,
+            template=self.template,
+            status=ExamAttemptStatus.ENTREGADO,
+            score=100,
+        )
+        exam_question = ExamQuestion.objects.create(
+            attempt=attempt,
+            source_question=self.question,
+            question_text=self.question.text,
+            options=[{"text": "Correcta", "is_correct": True}],
+        )
+        StudentAnswer.objects.create(
+            exam_question=exam_question,
+            selected_index=0,
+            selected_indexes=[0],
+            is_correct=True,
+        )
+        extension_code = ActivationCode.objects.create(
+            code="EXT30",
+            course_name="Curso teorico clase B",
+            duration_days=30,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("core_web:activate-course"),
+            {"activation_code": "EXT30"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        profile.refresh_from_db()
+        extension_code.refresh_from_db()
+        self.assertEqual(extension_code.used_by, self.user)
+        self.assertAlmostEqual(
+            profile.access_expires_at,
+            first_expiration + timedelta(days=30),
+            delta=timedelta(seconds=2),
+        )
+        self.assertEqual(ExamAttempt.objects.filter(student=self.user).count(), 1)
+        self.assertEqual(StudentAnswer.objects.filter(exam_question=exam_question).count(), 1)
+
     def test_api_start_requires_active_access_code(self):
         self.client.force_login(self.user)
         response = self.client.post(
@@ -592,6 +642,67 @@ class ActivationFlowTests(TestCase):
         )
         user = get_user_model().objects.get(username="clave@example.com")
         self.assertFalse(user.profile.has_active_exam_access())
+
+
+class FreeActivationCodeAdminTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.staff = user_model.objects.create_user(
+            username="masterdj",
+            email="masterdj@example.com",
+            password="strong-pass-123",
+            is_staff=True,
+        )
+        self.student = user_model.objects.create_user(
+            username="student-free",
+            email="student-free@example.com",
+            password="strong-pass-123",
+        )
+
+    def test_staff_can_generate_free_activation_codes(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("core_web:free-activation-codes"),
+            {
+                "count": 2,
+                "days": 30,
+                "prefix": "LIBRE",
+                "course_name": "Clase B",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        codes = ActivationCode.objects.filter(code__startswith="LIBRE-")
+        self.assertEqual(codes.count(), 2)
+        self.assertEqual(codes.filter(used_by__isnull=True).count(), 2)
+        self.assertContains(response, "Codigos generados")
+
+    def test_staff_can_email_free_activation_codes_to_external_recipient(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("core_web:free-activation-codes"),
+            {
+                "count": 1,
+                "days": 30,
+                "prefix": "EXT",
+                "course_name": "Clase B",
+                "recipient_email": "otraescuela@example.com",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        code = ActivationCode.objects.get(code__startswith="EXT-")
+        self.assertEqual(code.used_by, None)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["otraescuela@example.com"])
+        self.assertIn(code.code, mail.outbox[0].body)
+        self.assertContains(response, "Lote enviado a otraescuela@example.com")
+
+    def test_non_staff_cannot_generate_free_activation_codes(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("core_web:free-activation-codes"))
+
+        self.assertRedirects(response, reverse("core_web:dashboard"))
 
 
 class ExportQuestionBankCommandTests(TestCase):
@@ -929,6 +1040,123 @@ class InscripcionManagementTests(TestCase):
         self.assertIn(self.inscripcion.activation_code.code, mail.outbox[0].body)
         self.assertIn("Instrucciones", mail.outbox[0].body)
 
+    def test_staff_can_add_30_days_with_generated_code_for_same_student(self):
+        student = get_user_model().objects.create_user(
+            username="sucursal@example.com",
+            email="sucursal@example.com",
+            password="strong-pass-123",
+        )
+        profile = student.profile
+        first_expiration = timezone.now() + timedelta(days=8)
+        profile.access_expires_at = first_expiration
+        profile.activated_course_name = "Clase B"
+        profile.save()
+        activation = ActivationCode.objects.create(
+            code="CLASEB-EXTEND1",
+            course_name="Clase B",
+            duration_days=30,
+            is_enabled=True,
+        )
+        self.inscripcion.activation_code = activation
+        self.inscripcion.save(update_fields=["activation_code"])
+
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("core_web:manage-inscripciones"),
+            {"action": "add_30_days", "inscripcion_id": self.inscripcion.id},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        activation.refresh_from_db()
+        profile.refresh_from_db()
+        self.inscripcion.refresh_from_db()
+        self.assertEqual(activation.used_by, student)
+        self.assertEqual(self.inscripcion.user, student)
+        self.assertAlmostEqual(
+            profile.access_expires_at,
+            first_expiration + timedelta(days=30),
+            delta=timedelta(seconds=2),
+        )
+        self.assertContains(response, "Se agregaron 30 dias")
+
+    def test_staff_add_30_days_creates_new_code_when_generated_code_was_used(self):
+        student = get_user_model().objects.create_user(
+            username="sucursal@example.com",
+            email="sucursal@example.com",
+            password="strong-pass-123",
+        )
+        used_activation = ActivationCode.objects.create(
+            code="CLASEB-USED1",
+            course_name="Clase B",
+            duration_days=30,
+            is_enabled=True,
+            used_by=student,
+            used_at=timezone.now(),
+        )
+        self.inscripcion.activation_code = used_activation
+        self.inscripcion.save(update_fields=["activation_code"])
+        initial_count = ActivationCode.objects.count()
+
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("core_web:manage-inscripciones"),
+            {"action": "add_30_days", "inscripcion_id": self.inscripcion.id},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ActivationCode.objects.count(), initial_count + 1)
+        new_activation = ActivationCode.objects.exclude(pk=used_activation.pk).latest("created_at")
+        self.assertEqual(new_activation.used_by, student)
+        student.profile.refresh_from_db()
+        self.assertTrue(student.profile.has_active_exam_access())
+
+    def test_staff_add_30_days_does_not_crash_when_user_has_other_inscripcion(self):
+        student = get_user_model().objects.create_user(
+            username="sucursal@example.com",
+            email="sucursal@example.com",
+            password="strong-pass-123",
+        )
+        other_inscripcion = Inscripcion.objects.create(
+            nombre="Alumno Sucursal Original",
+            comuna="Santiago",
+            correo="sucursal@example.com",
+            telefono="+56 9 2222 3333",
+            curso="Curso teorico",
+            user=student,
+        )
+        first_expiration = timezone.now() - timedelta(days=3)
+        student.profile.access_expires_at = first_expiration
+        student.profile.save()
+        activation = ActivationCode.objects.create(
+            code="CLASEB-DUP1",
+            course_name="Clase B",
+            duration_days=30,
+            is_enabled=True,
+        )
+        self.inscripcion.activation_code = activation
+        self.inscripcion.save(update_fields=["activation_code"])
+
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("core_web:manage-inscripciones"),
+            {"action": "add_30_days", "inscripcion_id": self.inscripcion.id},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        activation.refresh_from_db()
+        self.inscripcion.refresh_from_db()
+        other_inscripcion.refresh_from_db()
+        student.profile.refresh_from_db()
+        self.assertEqual(activation.used_by, student)
+        self.assertIsNone(self.inscripcion.user)
+        self.assertEqual(self.inscripcion.status, Inscripcion.Status.CURSO_ACTIVO)
+        self.assertEqual(other_inscripcion.user, student)
+        self.assertTrue(student.profile.has_active_exam_access())
+        self.assertContains(response, "Se agregaron 30 dias")
+
     def test_staff_dashboard_shows_link_to_management_view(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("core_web:dashboard"))
@@ -936,6 +1164,7 @@ class InscripcionManagementTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Abrir inscripciones pendientes")
         self.assertContains(response, "Auditar alumnos")
+        self.assertContains(response, "Crear codigos libres")
 
     def test_staff_can_view_student_audit_list_and_profile(self):
         self.client.force_login(self.staff)

@@ -1,11 +1,9 @@
-from datetime import timedelta
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
-from django.utils import timezone
 
 from .models import ActivationCode, Inscripcion, Profile, UserRole
+from .services import activate_code_for_user
 
 
 User = get_user_model()
@@ -117,21 +115,8 @@ class StudentSignupForm(UserCreationForm):
             )
 
             activation = self.cleaned_data.get("activation_instance")
-            now = timezone.now()
             if activation:
-                profile.access_activated_at = now
-                profile.access_expires_at = now + timedelta(days=activation.duration_days)
-                profile.activated_course_name = activation.course_name
-                profile.save(
-                    update_fields=[
-                        "access_activated_at",
-                        "access_expires_at",
-                        "activated_course_name",
-                    ]
-                )
-                activation.used_by = user
-                activation.used_at = now
-                activation.save(update_fields=["used_by", "used_at"])
+                activate_code_for_user(user, activation)
 
             if inscripcion:
                 inscripcion.user = user
