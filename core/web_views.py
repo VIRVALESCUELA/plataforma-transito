@@ -49,19 +49,53 @@ from .services import (
 
 User = get_user_model()
 
-TOPIC_MATERIAL_PATHS = {
-    "siniestros de transito": "core/materiales/capitulo-1.pdf",
-    "los principios de la conduccion": "core/materiales/capitulo-2.pdf",
-    "convivencia vial": "core/materiales/capitulo-3.pdf",
-    "la persona en el transito": "core/materiales/capitulo-4.pdf",
-    "la y los usuarios vulnerables": "core/materiales/capitulo-5.pdf",
-    "las y los usuarios vulnerables": "core/materiales/capitulo-5.pdf",
-    "normas de circulacion": "core/materiales/capitulo-6.pdf",
-    "conduccion en circunstancias especiales": "core/materiales/capitulo-7.pdf",
-    "conduccion eficiente": "core/materiales/capitulo-8.pdf",
-    "informaciones importantes": "core/materiales/capitulo-9.pdf",
-    "anexo-definiciones": "core/materiales/glosario.pdf",
-    "anexo definiciones": "core/materiales/glosario.pdf",
+TOPIC_MATERIALS = {
+    "siniestros de transito": [
+        {"label": "Capitulo 1", "path": "core/materiales/capitulo-1.pdf"}
+    ],
+    "los principios de la conduccion": [
+        {"label": "Capitulo 2", "path": "core/materiales/capitulo-2.pdf"}
+    ],
+    "convivencia vial": [
+        {"label": "Capitulo 3", "path": "core/materiales/capitulo-3.pdf"}
+    ],
+    "la persona en el transito": [
+        {"label": "Capitulo 4", "path": "core/materiales/capitulo-4.pdf"}
+    ],
+    "la y los usuarios vulnerables": [
+        {"label": "Capitulo 5", "path": "core/materiales/capitulo-5.pdf"}
+    ],
+    "las y los usuarios vulnerables": [
+        {"label": "Capitulo 5", "path": "core/materiales/capitulo-5.pdf"}
+    ],
+    "normas de circulacion": [
+        {"label": "Capitulo 6", "path": "core/materiales/capitulo-6.pdf"}
+    ],
+    "conduccion en circunstancias especiales": [
+        {"label": "Capitulo 7", "path": "core/materiales/capitulo-7.pdf"}
+    ],
+    "conduccion eficiente": [
+        {"label": "Capitulo 8", "path": "core/materiales/capitulo-8.pdf"}
+    ],
+    "informaciones importantes": [
+        {"label": "Capitulo 9", "path": "core/materiales/capitulo-9.pdf"}
+    ],
+    "anexo-definiciones": [
+        {"label": "Glosario", "path": "core/materiales/glosario.pdf"},
+        {"label": "Senales", "path": "core/materiales/senales.pdf"},
+        {
+            "label": "Disposiciones",
+            "path": "core/materiales/disposiciones-vehículos.pdf",
+        },
+    ],
+    "anexo definiciones": [
+        {"label": "Glosario", "path": "core/materiales/glosario.pdf"},
+        {"label": "Senales", "path": "core/materiales/senales.pdf"},
+        {
+            "label": "Disposiciones",
+            "path": "core/materiales/disposiciones-vehículos.pdf",
+        },
+    ],
 }
 
 
@@ -78,9 +112,9 @@ def add_material_paths_to_exam_progress(exam_progress):
         return exam_progress
 
     for topic in exam_progress.get("topics", []):
-        topic["material_path"] = TOPIC_MATERIAL_PATHS.get(
+        topic["materials"] = TOPIC_MATERIALS.get(
             _normalize_topic_name(topic.get("topic", ""))
-        )
+        ) or []
     return exam_progress
 
 

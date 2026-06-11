@@ -170,6 +170,10 @@ main {
 table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08); }
 th, td { padding: 0.9rem 1rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
 tr:last-child td { border-bottom: none; }
+.topic-materials { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.45rem; }
+.topic-materials .meta { color: #64748b; }
+.topic-material-link { display: inline-flex; align-items: center; min-height: 28px; padding: 0.25rem 0.6rem; border-radius: 999px; background: #e3f2fd; color: #0d47a1; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
+.topic-material-link:hover { background: #bbdefb; }
 .status-pill { display: inline-block; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
 .status-pill.in-progress { background: #fff3cd; color: #8a6d3b; }
 .status-pill.completed { background: #c8e6c9; color: #2e7d32; }

@@ -210,16 +210,20 @@
                         {% for topic in exam_progress.topics %}
                             <tr>
                                 <td>
-                                    {% if topic.material_path %}
-                                        <a
-                                            class="topic-material-link"
-                                            href="{% static topic.material_path %}"
-                                            target="_blank"
-                                            rel="noopener"
-                                            title="Abrir material de estudio"
-                                        >{{ topic.topic }}</a>
-                                    {% else %}
-                                        {{ topic.topic }}
+                                    <span>{{ topic.topic }}</span>
+                                    {% if topic.materials %}
+                                        <div class="topic-materials">
+                                            <span class="meta">Materiales:</span>
+                                            {% for material in topic.materials %}
+                                                <a
+                                                    class="topic-material-link"
+                                                    href="{% static material.path %}"
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                    title="Abrir material de estudio"
+                                                >{{ material.label }}</a>
+                                            {% endfor %}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td>{{ topic.percent }}%</td>

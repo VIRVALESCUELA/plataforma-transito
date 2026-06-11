@@ -25,6 +25,7 @@ from .models import (
 )
 from .models import UserRole
 from .services import generate_exam_attempt, get_student_exam_progress, grade_single_answer
+from .web_views import add_material_paths_to_exam_progress
 
 
 class AuthFlowTests(TestCase):
@@ -1306,6 +1307,28 @@ class StudentProgressTests(TestCase):
         self.assertEqual(topics["Normas"]["percent"], 0)
         self.assertEqual(topics["Normas"]["coverage_percent"], 0)
         self.assertEqual(topics["Senales"]["answered"], 0)
+
+    def test_anexo_definiciones_includes_all_material_links(self):
+        progress = {
+            "topics": [
+                {
+                    "topic": "Anexo-Definiciones",
+                    "answered": 0,
+                    "correct": 0,
+                    "percent": 0,
+                    "coverage_percent": 0,
+                    "bank_total": 0,
+                }
+            ]
+        }
+
+        progress = add_material_paths_to_exam_progress(progress)
+
+        materials = progress["topics"][0]["materials"]
+        self.assertEqual(
+            [material["label"] for material in materials],
+            ["Glosario", "Senales", "Disposiciones"],
+        )
 
     def test_new_attempt_prioritizes_unseen_questions_before_repeats(self):
         q1 = self._create_question("Vista", self.topic_normas)
