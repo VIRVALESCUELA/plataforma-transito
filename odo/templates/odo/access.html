@@ -1,0 +1,52 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Asignar patentes{% endblock %}
+{% block odo_subtitle %}Define que staff puede trabajar cada patente de la flota.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Nueva asignacion</h2>
+        <form class="odo-form" method="post">
+            {% csrf_token %}
+            {% for field in access_form %}
+                <div class="odo-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+            {{ access_form.non_field_errors }}
+            <button class="btn" type="submit">Asignar patente</button>
+        </form>
+    </div>
+
+    <div class="odo-panel">
+        <h2>Asignaciones actuales</h2>
+        {% if vehicle_accesses %}
+            <div class="odo-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patente</th>
+                            <th>Staff</th>
+                            <th>Asignado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for access in vehicle_accesses %}
+                            <tr>
+                                <td><span class="odo-plate">{{ access.vehicle.plate }}</span></td>
+                                <td>{{ access.user.get_full_name|default:access.user.email|default:access.user.username }}</td>
+                                <td>{{ access.created_at|date:"d/m/Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="odo-empty">No hay patentes asignadas.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

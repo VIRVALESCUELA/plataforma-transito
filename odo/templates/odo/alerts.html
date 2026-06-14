@@ -1,0 +1,85 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Alertas{% endblock %}
+{% block odo_subtitle %}Programa vencimientos de aceite, revision tecnica y documentos.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Programar alerta</h2>
+        {% if vehicles %}
+            <form class="odo-form" method="post">
+                {% csrf_token %}
+                <div class="odo-field">
+                    <label for="{{ schedule_form.vehicle.id_for_label }}">{{ schedule_form.vehicle.label }}</label>
+                    {{ schedule_form.vehicle }}
+                    {{ schedule_form.vehicle.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ schedule_form.due_odometer.id_for_label }}">{{ schedule_form.due_odometer.label }}</label>
+                    {{ schedule_form.due_odometer }}
+                    {{ schedule_form.due_odometer.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ schedule_form.due_date.id_for_label }}">{{ schedule_form.due_date.label }}</label>
+                    {{ schedule_form.due_date }}
+                    {{ schedule_form.due_date.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ schedule_form.notes.id_for_label }}">{{ schedule_form.notes.label }}</label>
+                    {{ schedule_form.notes }}
+                    {{ schedule_form.notes.errors }}
+                </div>
+                <div class="odo-field odo-checklist">
+                    <label for="{{ schedule_form.name.id_for_label }}">{{ schedule_form.name.label }}</label>
+                    {{ schedule_form.name }}
+                    {{ schedule_form.name.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ schedule_form.custom_name.id_for_label }}">{{ schedule_form.custom_name.label }}</label>
+                    {{ schedule_form.custom_name }}
+                    {{ schedule_form.custom_name.errors }}
+                </div>
+                {{ schedule_form.non_field_errors }}
+                <button class="btn" type="submit">Guardar alerta</button>
+            </form>
+        {% else %}
+            <p class="odo-empty">Aun no tienes una patente asignada.</p>
+        {% endif %}
+    </div>
+
+    <div class="odo-panel">
+        <h2>Alertas pendientes</h2>
+        {% if pending_schedules %}
+            <div class="odo-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vehiculo</th>
+                            <th>Alerta</th>
+                            <th>Km</th>
+                            <th>Fecha</th>
+                            <th>Nota</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in pending_schedules %}
+                            <tr>
+                                <td>{{ schedule.vehicle.plate }}</td>
+                                <td>{{ schedule.name }}</td>
+                                <td>{% if schedule.due_odometer %}{{ schedule.due_odometer }}{% else %}&mdash;{% endif %}</td>
+                                <td>{% if schedule.due_date %}{{ schedule.due_date|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
+                                <td>{{ schedule.notes|default:"-" }}</td>
+                                <td>{{ schedule.get_status_display }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="odo-empty">No hay alertas programadas.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

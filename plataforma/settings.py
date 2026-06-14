@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'core',
+    'odo',
 ]
 
 MIDDLEWARE = [
@@ -120,16 +121,31 @@ database_url = os.getenv("DATABASE_URL", "")
 
 if database_url:
     parsed_database_url = urlparse(database_url)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed_database_url.path.lstrip("/"),
-            "USER": unquote(parsed_database_url.username or ""),
-            "PASSWORD": unquote(parsed_database_url.password or ""),
-            "HOST": parsed_database_url.hostname or "localhost",
-            "PORT": parsed_database_url.port or "5432",
+    if parsed_database_url.scheme == "sqlite":
+        database_name = unquote(parsed_database_url.path.lstrip("/"))
+        if parsed_database_url.netloc:
+            database_name = f"{parsed_database_url.netloc}/{database_name}"
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / database_name if database_name != ":memory:" else database_name,
+            }
         }
-    }
+    elif parsed_database_url.scheme in {"postgres", "postgresql"}:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": parsed_database_url.path.lstrip("/"),
+                "USER": unquote(parsed_database_url.username or ""),
+                "PASSWORD": unquote(parsed_database_url.password or ""),
+                "HOST": parsed_database_url.hostname or "localhost",
+                "PORT": parsed_database_url.port or "5432",
+            }
+        }
+    else:
+        raise RuntimeError(
+            "DATABASE_URL debe usar esquema sqlite://, postgres:// o postgresql://."
+        )
 elif os.getenv("POSTGRES_DB"):
     DATABASES = {
         "default": {
@@ -178,8 +194,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_URL = os.getenv("STATIC_URL", "static/")
+STATIC_ROOT = Path(os.getenv("STATIC_ROOT", BASE_DIR / "staticfiles"))
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/panel/"
 LOGOUT_REDIRECT_URL = "/"
@@ -206,29 +222,35 @@ REST_FRAMEWORK = {
     ),
 }
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media"))
 
-EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND",
-    (
-        "django.core.mail.backends.console.EmailBackend"
-        if DEBUG
-        else "django.core.mail.backends.smtp.EmailBackend"
-    ),
-)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25") or "25")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "false").lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    (
+        "django.core.mail.backends.smtp.EmailBackend"
+        if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD
+        else "django.core.mail.backends.console.EmailBackend"
+    )
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
-    "Escuela Virval <escuelavirval.grecia@gmail.com>",
+    "Escuela Virval <virvalescuela@gmail.com>",
 )
 INSCRIPCION_NOTIFICATION_EMAIL = os.getenv(
     "INSCRIPCION_NOTIFICATION_EMAIL",
+    "virvalescuela@gmail.com",
+)
+ODO_ALERT_NOTIFICATION_EMAIL = os.getenv(
+    "ODO_ALERT_NOTIFICATION_EMAIL",
     "virvalescuela@gmail.com",
 )
 

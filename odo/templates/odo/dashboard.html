@@ -1,0 +1,117 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Cargar combustible{% endblock %}
+{% block odo_subtitle %}Registra kilometraje, litros y monto cargado en pocos segundos.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Carga rapida</h2>
+        {% if vehicles %}
+            <form class="odo-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_fuel">
+                {% for field in fuel_form %}
+                    <div class="odo-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                {{ fuel_form.non_field_errors }}
+                <button class="btn" type="submit">Guardar carga</button>
+            </form>
+        {% else %}
+            <p class="odo-empty">Aun no tienes una patente asignada.</p>
+            {% if can_manage_vehicles %}
+                <p style="margin-top: 1rem;"><a class="btn" href="{% url 'odo_web:vehicles' %}">Registrar vehiculo</a></p>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="odo-panel">
+        <h2>Estado rapido</h2>
+        {% if vehicle_status_cards %}
+            <div class="odo-list">
+                {% for card in vehicle_status_cards %}
+                    <div>
+                        <span class="odo-plate">{{ card.vehicle.plate }}</span>
+                        <div class="odo-muted">{{ card.vehicle.current_odometer }} km actuales</div>
+                        <div class="odo-status-grid" style="margin-top: 0.65rem;">
+                            <div class="odo-status-box">
+                                <span>Aceite</span>
+                                {% if card.oil_schedule %}
+                                    {% if card.oil_schedule.due_odometer %}
+                                        <strong>{{ card.oil_schedule.due_odometer }} km</strong>
+                                    {% else %}
+                                        <strong>Programado</strong>
+                                    {% endif %}
+                                    <small>{{ card.oil_schedule.get_status_display }}</small>
+                                {% else %}
+                                    <strong>Sin programar</strong>
+                                {% endif %}
+                            </div>
+                            <div class="odo-status-box">
+                                <span>Revision tecnica</span>
+                                {% if card.inspection_schedule %}
+                                    {% if card.inspection_schedule.due_date %}
+                                        <strong>{{ card.inspection_schedule.due_date|date:"d/m/Y" }}</strong>
+                                    {% else %}
+                                        <strong>Programada</strong>
+                                    {% endif %}
+                                    <small>{{ card.inspection_schedule.get_status_display }}</small>
+                                {% else %}
+                                    <strong>Sin programar</strong>
+                                {% endif %}
+                            </div>
+                            <div class="odo-status-box">
+                                <span>Alertas</span>
+                                <strong>{{ card.open_alert_count }}</strong>
+                                <small>abiertas</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="odo-empty">Aun no tienes una patente asignada.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="odo-panel">
+    <h2>Ultimas cargas</h2>
+    {% if recent_fuel_cards %}
+        <div class="odo-list">
+            {% for card in recent_fuel_cards %}
+                <div class="odo-row odo-fuel-row">
+                    <div class="odo-fuel-main">
+                        <span class="odo-plate">{{ card.entry.vehicle.plate }}</span>
+                        <div class="odo-muted">{{ card.entry.date|date:"d/m/Y" }} · {{ card.entry.liters }} L</div>
+                    </div>
+                    <div class="odo-fuel-metrics">
+                        <div>
+                            <span>Costo/L</span>
+                            <strong>${{ card.entry.price_per_liter|floatformat:0 }}</strong>
+                        </div>
+                        <div>
+                            <span>Rend.</span>
+                            {% if card.performance %}
+                                <strong>{{ card.performance }} km/L</strong>
+                            {% else %}
+                                <strong>Sin dato</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="odo-fuel-total">
+                        <strong>${{ card.entry.total_cost|floatformat:0 }}</strong><br>
+                        <span class="odo-muted">{{ card.entry.odometer }} km</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="odo-empty">No hay cargas registradas.</p>
+    {% endif %}
+</div>
+{% endblock %}

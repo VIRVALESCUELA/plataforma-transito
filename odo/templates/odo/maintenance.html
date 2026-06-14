@@ -1,0 +1,73 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Mantenciones{% endblock %}
+{% block odo_subtitle %}Registra trabajos realizados como historial por patente.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Registrar mantencion realizada</h2>
+        {% if vehicles %}
+            <form class="odo-form" method="post">
+                {% csrf_token %}
+                <div class="odo-field">
+                    <label for="{{ record_form.vehicle.id_for_label }}">{{ record_form.vehicle.label }}</label>
+                    {{ record_form.vehicle }}
+                    {{ record_form.vehicle.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ record_form.date.id_for_label }}">{{ record_form.date.label }}</label>
+                    {{ record_form.date }}
+                    {{ record_form.date.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ record_form.odometer.id_for_label }}">{{ record_form.odometer.label }}</label>
+                    {{ record_form.odometer }}
+                    {{ record_form.odometer.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ record_form.cost.id_for_label }}">{{ record_form.cost.label }}</label>
+                    {{ record_form.cost }}
+                    {{ record_form.cost.errors }}
+                </div>
+                <div class="odo-field">
+                    <label for="{{ record_form.notes.id_for_label }}">{{ record_form.notes.label }}</label>
+                    {{ record_form.notes }}
+                    {{ record_form.notes.errors }}
+                </div>
+                <div class="odo-field odo-checklist">
+                    <label for="{{ record_form.services.id_for_label }}">{{ record_form.services.label }}</label>
+                    {{ record_form.services }}
+                    {{ record_form.services.errors }}
+                </div>
+                {{ record_form.non_field_errors }}
+                <button class="btn" type="submit">Guardar registro</button>
+            </form>
+        {% else %}
+            <p class="odo-empty">Primero registra un vehiculo.</p>
+        {% endif %}
+    </div>
+
+    <div class="odo-panel">
+        <h2>Ultimas mantenciones</h2>
+        {% if recent_maintenance_records %}
+            <div class="odo-list">
+                {% for record in recent_maintenance_records %}
+                    <div class="odo-row">
+                        <div>
+                            <span class="odo-plate">{{ record.vehicle.plate }}</span>
+                            <div class="odo-muted">{{ record.name }} · {{ record.date|date:"d/m/Y" }}</div>
+                        </div>
+                        <div>
+                            <strong>{{ record.odometer }} km</strong><br>
+                            <span class="odo-muted">${{ record.cost|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="odo-empty">No hay mantenciones registradas.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

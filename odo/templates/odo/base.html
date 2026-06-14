@@ -1,0 +1,292 @@
+{% extends "core/base.html" %}
+
+{% block title %}ODO - Control de Vehiculo{% endblock %}
+
+{% block content %}
+<style>
+    .odo-shell,
+    .odo-shell * {
+        box-sizing: border-box;
+    }
+    .odo-shell {
+        display: grid;
+        gap: 1rem;
+        max-width: 100%;
+        padding: 1rem;
+        border: 1px solid rgba(31, 75, 66, 0.12);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(244, 239, 227, 0.72), rgba(232, 245, 233, 0.42));
+    }
+    .odo-panel {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border: 1px solid rgba(31, 75, 66, 0.16);
+        border-top: 4px solid var(--brand-amber, #f4c64b);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(31, 45, 61, 0.07);
+        padding: 1rem;
+    }
+    .odo-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: end;
+    }
+    .odo-title {
+        margin: 0;
+        color: var(--brand-green, #1f4b42);
+        font-size: 1.7rem;
+    }
+    .odo-subtitle,
+    .odo-empty,
+    .odo-muted {
+        color: #607d8b;
+        line-height: 1.45;
+    }
+    .odo-subtitle {
+        margin: 0.35rem 0 0;
+    }
+    .odo-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .odo-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0.45rem 0.7rem;
+        border: 1px solid rgba(31, 75, 66, 0.22);
+        border-radius: 999px;
+        color: var(--brand-green, #1f4b42);
+        font-weight: 800;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 6px 16px rgba(31, 75, 66, 0.08);
+    }
+    .odo-nav a:hover {
+        border-color: rgba(244, 198, 75, 0.82);
+        background: #fff8e1;
+        color: #12352c;
+    }
+    .odo-grid,
+    .odo-two-col,
+    .odo-status-grid {
+        display: grid;
+        gap: 1rem;
+    }
+    .odo-two-col {
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+    }
+    .odo-status-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .odo-form {
+        display: grid;
+        gap: 0.8rem;
+        flex: 1;
+    }
+    .odo-field label {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: #1f2d3d;
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+    .odo-panel input:not([type="checkbox"]),
+    .odo-panel select,
+    .odo-panel textarea,
+    .odo-panel button {
+        width: 100%;
+        max-width: 100%;
+    }
+    .odo-panel input:not([type="checkbox"]),
+    .odo-panel select,
+    .odo-panel textarea {
+        display: block;
+    }
+    .odo-panel input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--brand-green, #1f4b42);
+    }
+    .odo-panel textarea {
+        resize: vertical;
+    }
+    .odo-form > button {
+        margin-top: auto;
+    }
+    .odo-checklist #id_name,
+    .odo-checklist #id_services {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+        max-height: 430px;
+        overflow: auto;
+        padding-right: 0.25rem;
+    }
+    .odo-checklist #id_name > div,
+    .odo-checklist #id_services > div {
+        border: 1px solid rgba(31, 75, 66, 0.14);
+        border-radius: 10px;
+        background: #fffdf8;
+        padding: 0.75rem;
+    }
+    .odo-checklist #id_name > div > label,
+    .odo-checklist #id_services > div > label {
+        color: var(--brand-green, #1f4b42);
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+    }
+    .odo-checklist #id_name > div > div label,
+    .odo-checklist #id_services > div > div label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        margin-top: 0.35rem;
+        color: #1f2d3d;
+        font-size: 0.88rem;
+        font-weight: 650;
+        line-height: 1.25;
+    }
+    .odo-plate {
+        font-weight: 900;
+        color: var(--brand-green, #1f4b42);
+        letter-spacing: 0.08em;
+    }
+    .odo-status-box {
+        min-width: 0;
+        border: 1px solid rgba(31, 75, 66, 0.14);
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(232, 245, 233, 0.78), rgba(227, 242, 253, 0.58));
+        padding: 0.75rem;
+    }
+    .odo-status-box span {
+        display: block;
+        color: #607d8b;
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .odo-status-box strong {
+        display: block;
+        margin-top: 0.35rem;
+        color: var(--brand-text, #1f2d3d);
+        line-height: 1.2;
+    }
+    .odo-status-box small {
+        display: block;
+        margin-top: 0.25rem;
+        color: #607d8b;
+    }
+    .odo-list {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+    }
+    .odo-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid rgba(31, 75, 66, 0.1);
+        padding: 0.65rem 0;
+    }
+    .odo-row:last-child {
+        border-bottom: 0;
+    }
+    .odo-fuel-row {
+        align-items: flex-start;
+    }
+    .odo-fuel-main {
+        min-width: 0;
+        flex: 1 1 0;
+    }
+    .odo-fuel-metrics {
+        display: flex;
+        flex: 1 1 0;
+        gap: clamp(4rem, 8vw, 7rem);
+        align-items: flex-start;
+        justify-content: center;
+        text-align: center;
+    }
+    .odo-fuel-metrics > div {
+        width: 5.5rem;
+    }
+    .odo-fuel-metrics span {
+        display: block;
+        color: #7a5a00;
+        font-size: 0.74rem;
+        font-weight: 850;
+        line-height: 1.15;
+        text-transform: uppercase;
+    }
+    .odo-fuel-metrics strong {
+        display: block;
+        margin-top: 0.2rem;
+        color: var(--brand-green, #1f4b42);
+        font-size: 0.95rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    .odo-fuel-total {
+        flex: 1 1 0;
+        text-align: right;
+    }
+    .odo-table-wrap {
+        overflow-x: auto;
+    }
+    table {
+        box-shadow: none;
+    }
+    @media (max-width: 900px) {
+        .odo-header,
+        .odo-two-col,
+        .odo-status-grid,
+        .odo-checklist #id_name,
+        .odo-checklist #id_services {
+            grid-template-columns: 1fr;
+        }
+        .odo-fuel-row {
+            display: grid;
+            gap: 0.5rem;
+        }
+        .odo-fuel-metrics {
+            justify-content: flex-start;
+            text-align: left;
+        }
+        .odo-fuel-total {
+            text-align: left;
+        }
+        .odo-nav {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 0.5rem 0;
+            background: rgba(244, 239, 227, 0.96);
+        }
+    }
+</style>
+
+<section class="odo-shell">
+    <div class="odo-header">
+        <div>
+            <h1 class="odo-title">{% block odo_title %}ODO{% endblock %}</h1>
+            <p class="odo-subtitle">{% block odo_subtitle %}Control rapido por patente.{% endblock %}</p>
+        </div>
+        <nav class="odo-nav" aria-label="Modulos ODO">
+            <a href="{% url 'odo_web:dashboard' %}">Combustible</a>
+            <a href="{% url 'odo_web:vehicles' %}">Vehiculos</a>
+            {% if user.is_superuser %}
+                <a href="{% url 'odo_web:access' %}">Asignar patentes</a>
+            {% endif %}
+            <a href="{% url 'odo_web:alerts' %}">Alertas</a>
+            <a href="{% url 'odo_web:maintenance' %}">Mantenciones</a>
+        </nav>
+    </div>
+    {% block odo_content %}{% endblock %}
+</section>
+{% endblock %}

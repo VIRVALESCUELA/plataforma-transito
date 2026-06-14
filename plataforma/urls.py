@@ -11,10 +11,12 @@ urlpatterns = [
     path("accounts/signup/", StudentSignupView.as_view(), name="student_signup"),
     path("accounts/logout/", PublicLogoutView.as_view(), name="logout"),
     path("accounts/", include("django.contrib.auth.urls")),
+    path("odo/", include("odo.web_urls")),
     path("", include("core.web_urls")),
     path("api/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/", include("rest_framework.urls")),
+    path("api/odo/", include("odo.urls")),
     path("api/", include("core.urls")),
 ]
 
