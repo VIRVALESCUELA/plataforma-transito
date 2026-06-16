@@ -170,6 +170,24 @@ main {
 table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08); }
 th, td { padding: 0.9rem 1rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
 tr:last-child td { border-bottom: none; }
+.sticky-table-wrap {
+    max-height: 68vh;
+    overflow: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+.sticky-header-table {
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+}
+.sticky-header-table th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #f8fafc;
+    box-shadow: 0 2px 0 #dbe7f3, 0 8px 16px rgba(15, 23, 42, 0.08);
+}
 .topic-materials { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.45rem; }
 .topic-materials .meta { color: #64748b; }
 .topic-material-link { display: inline-flex; align-items: center; min-height: 28px; padding: 0.25rem 0.6rem; border-radius: 999px; background: #e3f2fd; color: #0d47a1; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
@@ -216,8 +234,31 @@ form.inline { display: inline; }
     border: 1px solid rgba(30, 136, 229, 0.2);
 }
 .access-status-card {
-    background: #eef7f0;
-    border: 1px solid rgba(31, 75, 66, 0.16);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    background:
+        linear-gradient(120deg, rgba(18, 53, 44, 0.86), rgba(31, 94, 65, 0.76)),
+        url("ENPRACTICA.png") center / cover no-repeat;
+    box-shadow: 0 16px 38px rgba(31, 45, 61, 0.1);
+}
+.access-status-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 7px;
+    background: linear-gradient(180deg, var(--brand-green), var(--brand-amber));
+}
+.access-status-card h2,
+.access-status-card p {
+    color: #fff;
+}
+.access-status-card .section-heading h2 {
+    color: #fff;
+}
+.access-status-card .summary-card {
+    background: rgba(248, 250, 252, 0.94);
+    border-color: rgba(219, 231, 243, 0.78);
 }
 .summary-label {
     display: block;

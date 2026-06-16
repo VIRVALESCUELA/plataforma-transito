@@ -49,24 +49,8 @@
     </div>
 </article>
 
-{% if user.is_staff %}
 <section class="dashboard-section">
-    <article class="card">
-        <h2 style="margin-top: 0;">Gestion interna</h2>
-        <p style="max-width: 720px;">
-            Accede a la bandeja comercial y al modo auditoria para revisar alumnos, examenes y preguntas sin modificar respuestas.
-        </p>
-        <div style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
-            <a class="btn" href="{% url 'core_web:manage-inscripciones' %}">Abrir inscripciones pendientes</a>
-            <a class="btn btn-outline" href="{% url 'core_web:staff-students' %}">Auditar alumnos</a>
-            <a class="btn btn-outline" href="{% url 'core_web:free-activation-codes' %}">Crear codigos libres</a>
-        </div>
-    </article>
-</section>
-{% endif %}
-
-<section class="dashboard-section">
-    <article class="card {% if has_exam_access %}highlight-card access-status-card{% endif %}">
+    <article class="card {% if has_exam_access %}access-status-card{% endif %}">
         <h2 style="margin-top: 0;">Estado de acceso</h2>
         {% if has_exam_access %}
             <p>
@@ -87,6 +71,45 @@
                     <span class="summary-value">{{ access_expires_in_days }}</span>
                 </div>
             </div>
+            {% if exam_progress %}
+                <div class="section-heading" style="margin-top: 1.75rem;">
+                    <h2>Avance del banco de preguntas</h2>
+                </div>
+                <div class="exam-summary">
+                    <div class="summary-card">
+                        <span class="summary-label">Cobertura del banco</span>
+                        <span class="summary-value">{{ exam_progress.coverage_percent }}%</span>
+                        <small>Avance estimado sobre preguntas distintas</small>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">Rendimiento general</span>
+                        <span class="summary-value">
+                            {% if exam_progress.general_percent is not None %}
+                                {{ exam_progress.general_percent }}%
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </span>
+                        <small>{{ exam_progress.correct }} correctas de {{ exam_progress.answered }} respondidas</small>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">Falladas pendientes</span>
+                        <span class="summary-value">{{ exam_progress.failed_pending_count }}</span>
+                        <small>Preguntas que conviene repetir</small>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">Ultimos 5 examenes</span>
+                        <span class="summary-value">
+                            {% if exam_progress.recent_average is not None %}
+                                {{ exam_progress.recent_average }}%
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </span>
+                        <small>Promedio de los intentos mas recientes</small>
+                    </div>
+                </div>
+            {% endif %}
         {% else %}
             <p>
                 Tu cuenta esta creada, pero todavia no tienes acceso activo a los examenes.
@@ -146,61 +169,22 @@
 
 {% if has_exam_access and exam_progress %}
 <section class="dashboard-section">
+    <h2 style="margin-bottom: 1rem;">
+        {% if exam_progress.ready_for_municipal %}
+            <span class="status-pill completed" style="font-size: 1rem; padding: 0.45rem 0.9rem;">Listo para examen municipal</span>
+        {% elif exam_progress.attempt_count == 0 %}
+            <span class="status-pill in-progress" style="font-size: 1rem; padding: 0.45rem 0.9rem;">Comienza con tu primer examen</span>
+        {% else %}
+            <span class="status-pill in-progress" style="font-size: 1rem; padding: 0.45rem 0.9rem;">En entrenamiento</span>
+        {% endif %}
+    </h2>
     <article class="card">
-        <div class="section-heading">
-            <h2 style="margin-top: 0;">Avance del banco de preguntas</h2>
-        </div>
-        <div class="exam-summary">
-            <div class="summary-card">
-                <span class="summary-label">Cobertura del banco</span>
-                <span class="summary-value">{{ exam_progress.coverage_percent }}%</span>
-                <small>Avance estimado sobre preguntas distintas</small>
-            </div>
-            <div class="summary-card">
-                <span class="summary-label">Rendimiento general</span>
-                <span class="summary-value">
-                    {% if exam_progress.general_percent is not None %}
-                        {{ exam_progress.general_percent }}%
-                    {% else %}
-                        &mdash;
-                    {% endif %}
-                </span>
-                <small>{{ exam_progress.correct }} correctas de {{ exam_progress.answered }} respondidas</small>
-            </div>
-            <div class="summary-card">
-                <span class="summary-label">Falladas pendientes</span>
-                <span class="summary-value">{{ exam_progress.failed_pending_count }}</span>
-                <small>Preguntas que conviene repetir</small>
-            </div>
-            <div class="summary-card">
-                <span class="summary-label">Ultimos 5 examenes</span>
-                <span class="summary-value">
-                    {% if exam_progress.recent_average is not None %}
-                        {{ exam_progress.recent_average }}%
-                    {% else %}
-                        &mdash;
-                    {% endif %}
-                </span>
-                <small>Promedio de los intentos mas recientes</small>
-            </div>
-        </div>
-
-        <div style="margin-top: 1.25rem;">
-            {% if exam_progress.ready_for_municipal %}
-                <span class="status-pill completed">Listo para examen municipal</span>
-            {% elif exam_progress.attempt_count == 0 %}
-                <span class="status-pill in-progress">Comienza con tu primer examen</span>
-            {% else %}
-                <span class="status-pill in-progress">En entrenamiento</span>
-            {% endif %}
-        </div>
-
         {% if exam_progress.topics %}
-            <div style="margin-top: 1.5rem; overflow-x: auto;">
+            <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
-                            <th>Tema</th>
+                            <th>Tema / Contenido / Descargalo</th>
                             <th>Rendimiento</th>
                             <th>Cobertura</th>
                             <th>Respondidas</th>

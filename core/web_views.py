@@ -538,6 +538,10 @@ class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView)
         )
 
 
+class StaffInternalManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/staff_internal_management.html"
+
+
 class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
     template_name = "core/staff_students.html"
 

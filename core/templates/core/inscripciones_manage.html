@@ -2,7 +2,7 @@
 {% block title %}Inscripciones pendientes{% endblock %}
 
 {% block content %}
-<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+<a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver a gestion interna</a>
 
 <section class="card">
     <h1 style="margin-top:0;">Inscripciones y codigos Clase B</h1>
@@ -27,8 +27,8 @@
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
     {% if inscripciones %}
-        <div style="overflow-x: auto;">
-            <table>
+        <div class="sticky-table-wrap">
+            <table class="sticky-header-table">
                 <thead>
                     <tr>
                         <th>Fecha</th>

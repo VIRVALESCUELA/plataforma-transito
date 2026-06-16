@@ -326,6 +326,7 @@
 }
 
 .signup-hero {
+    justify-content: center;
     gap: clamp(1.5rem, 3vw, 2.5rem);
 }
 
@@ -335,8 +336,9 @@
 }
 
 .signup-copy-media {
-    margin-top: auto;
-    padding-top: clamp(1.2rem, 3vw, 2rem);
+    margin-top: 1.4rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(31, 75, 66, 0.12);
 }
 
 .signup-copy-media img {
@@ -353,6 +355,10 @@
 .signup-shell {
     max-width: 560px;
     padding: clamp(1.6rem, 3vw, 2.35rem);
+}
+
+.signup-title-chip {
+    margin-bottom: 1.25rem;
 }
 
 .course-form {

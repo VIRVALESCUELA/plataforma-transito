@@ -18,7 +18,7 @@
     <link rel="apple-touch-icon" href="{% static 'core/logo2.png' %}?v=2">
     <link rel="preload" as="image" href="{% static 'core/logo2.png' %}?v=2">
     <title>{% block title %}Plataforma de Examenes{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'core/app.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'core/app.css' %}?v=4">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -38,6 +38,7 @@
             {% if user.is_authenticated %}
                 <a href="{% url 'core_web:dashboard' %}">Mi panel</a>
                 {% if user.is_staff %}
+                    <a href="{% url 'core_web:internal-management' %}">Gestion</a>
                     <a href="{% url 'odo_web:dashboard' %}">ODO</a>
                 {% endif %}
             {% endif %}

@@ -1308,6 +1308,46 @@ class StudentProgressTests(TestCase):
         self.assertEqual(topics["Normas"]["coverage_percent"], 0)
         self.assertEqual(topics["Senales"]["answered"], 0)
 
+    def test_progress_topics_are_ordered_by_course_chapters(self):
+        topic_names = [
+            "Anexo-Definiciones",
+            "Conduccion eficiente",
+            "Siniestros de transito",
+            "Normas de circulacion",
+            "Informaciones importantes",
+            "La persona en el transito",
+            "Los principios de la conduccion",
+            "Convivencia vial",
+            "Conduccion en circunstancias especiales",
+            "La y los usuarios vulnerables",
+        ]
+        for topic_name in topic_names:
+            topic = Topic.objects.create(name=topic_name)
+            self._create_question(f"{topic_name} pregunta", topic)
+
+        progress = get_student_exam_progress(self.student)
+
+        ordered_topics = [
+            topic["topic"]
+            for topic in progress["topics"]
+            if topic["topic"] in topic_names
+        ]
+        self.assertEqual(
+            ordered_topics,
+            [
+                "Siniestros de transito",
+                "Los principios de la conduccion",
+                "Convivencia vial",
+                "La persona en el transito",
+                "La y los usuarios vulnerables",
+                "Normas de circulacion",
+                "Conduccion en circunstancias especiales",
+                "Conduccion eficiente",
+                "Informaciones importantes",
+                "Anexo-Definiciones",
+            ],
+        )
+
     def test_anexo_definiciones_includes_all_material_links(self):
         progress = {
             "topics": [

@@ -1,5 +1,6 @@
 import random
 import logging
+import unicodedata
 from collections import defaultdict
 from datetime import timedelta
 
@@ -25,6 +26,19 @@ logger = logging.getLogger(__name__)
 EARLY_EXAM_LIMIT = 18
 EARLY_FAILED_REVIEW_RATIO = 0.2
 LATE_FAILED_REVIEW_RATIO = 0.5
+TOPIC_PROGRESS_ORDER = {
+    "siniestros de transito": 1,
+    "los principios de la conduccion": 2,
+    "convivencia vial": 3,
+    "la persona en el transito": 4,
+    "la y los usuarios vulnerables": 5,
+    "las y los usuarios vulnerables": 5,
+    "normas de circulacion": 6,
+    "conduccion en circunstancias especiales": 7,
+    "conduccion eficiente": 8,
+    "informaciones importantes": 9,
+    "anexo definiciones": 11,
+}
 
 
 def send_activation_code_email(inscripcion, activation, activation_url=None):
@@ -173,6 +187,21 @@ def _question_key_from_exam_question(exam_question):
 
 def _normalized_question_text(text):
     return " ".join((text or "").split()).casefold()
+
+
+def _normalized_topic_name(name):
+    decomposed = unicodedata.normalize("NFKD", name or "")
+    without_accents = "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    )
+    return " ".join(without_accents.replace("-", " ").casefold().split())
+
+
+def _topic_progress_sort_key(item):
+    topic = item.get("topic", "")
+    normalized_topic = _normalized_topic_name(topic)
+    order = TOPIC_PROGRESS_ORDER.get(normalized_topic, 10)
+    return (order, normalized_topic)
 
 
 def _unique_question_count(pool):
@@ -626,7 +655,7 @@ def get_student_exam_progress(student):
             }
         )
 
-    topics.sort(key=lambda item: (item["percent"], -item["answered"]))
+    topics.sort(key=_topic_progress_sort_key)
     recent_scores = [
         attempt.score
         for attempt in attempts.order_by("-finished_at", "-id")[:5]

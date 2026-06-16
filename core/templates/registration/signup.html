@@ -3,25 +3,14 @@
 {% block title %}Crear cuenta{% endblock %}
 {% block extra_head %}
     {{ block.super }}
-    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=8">
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=9">
 {% endblock %}
 
 {% block content %}
 <div class="inscripcion-page signup-page">
     <section class="hero inscripcion-hero signup-hero">
-        <div class="card hero__copy inscripcion-copy">
-            <span class="chip">CREA TU CUENTA</span>
-            <h1>Si ya estás inscrito, accede a tu panel de estudiante y activa tu curso.
-                Practica con exámenes actualizados, monitorea tu progreso y estudia el feedback.
-            </h1>
-            <p class="section-lead" style="margin-bottom: 0;">
-                Crea tu usuario con una clave simple y, una vez dentro, podrás activar tu curso con el código entregado al momento de tu matricula.
-            </p>
-            <div class="signup-copy-media">
-                <img src="{% static 'core/exa.png' %}" alt="Escuela de conductores Virval">
-            </div>
-        </div>
         <div class="card inscripcion-shell signup-shell">
+            <span class="chip signup-title-chip">CREA TU CUENTA</span>
             <form class="course-form signup-form" method="post">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
@@ -48,6 +37,9 @@
             <div class="auth-switch">
                 <span>Ya tienes una cuenta?</span>
                 <a href="{% url 'login' %}">Inicia sesion</a>
+            </div>
+            <div class="signup-copy-media">
+                <img src="{% static 'core/exa.png' %}" alt="Escuela de conductores Virval">
             </div>
         </div>
     </section>
