@@ -54,6 +54,33 @@ class AuthFlowTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
 
+class PasswordResetFlowTests(TestCase):
+    def setUp(self):
+        self.student = get_user_model().objects.create_user(
+            username="student-reset@example.com",
+            email="student-reset@example.com",
+            password="old-pass-123",
+        )
+
+    def test_login_links_to_password_reset(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertContains(response, reverse("password_reset"))
+        self.assertContains(response, "Olvidaste tu contraseña?")
+
+    def test_student_can_request_password_reset_from_public_form(self):
+        response = self.client.post(
+            reverse("password_reset"),
+            {"email": "student-reset@example.com"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["student-reset@example.com"])
+        self.assertIn("/accounts/reset/", mail.outbox[0].body)
+
+
 class PageVisitCounterTests(TestCase):
     def test_students_page_increments_visit_counter(self):
         url = reverse("core_web:alumnos")

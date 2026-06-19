@@ -361,8 +361,25 @@
     margin-bottom: 1.25rem;
 }
 
+.login-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 520px;
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.login-title-chip {
+    align-self: center;
+    margin-bottom: 1.25rem;
+}
+
 .course-form {
     width: 100%;
+}
+
+.login-form {
+    max-width: 440px;
 }
 
 .form-errors {
@@ -468,6 +485,12 @@
     color: #59615d;
     font-size: 0.95rem;
     flex-wrap: wrap;
+}
+
+.auth-switch-compact {
+    margin-top: 1rem;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .auth-switch a {

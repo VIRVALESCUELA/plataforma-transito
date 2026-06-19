@@ -3,21 +3,15 @@
 {% block title %}Iniciar sesion{% endblock %}
 {% block extra_head %}
     {{ block.super }}
-    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'core/landing.css' %}?v=11">
 {% endblock %}
 
 {% block content %}
 <div class="inscripcion-page">
     <section class="hero inscripcion-hero">
-        <div class="card hero__copy inscripcion-copy">
-            <span class="chip">ACCESO A LA PLATAFORMA</span>
-            <h1>Inicia sesión </h1>
-            <p class="section-lead" style="margin-bottom: 0;">
-                Accede con tu usuario y contraseña a tu panel personal y continua con tu curso, revisa tu avance y descarga los recursos disponibles.
-            </p>
-        </div>
-        <div class="card inscripcion-shell">
-            <form class="course-form" method="post">
+        <div class="card inscripcion-shell login-shell">
+            <span class="chip login-title-chip">ACCESO A LA PLATAFORMA</span>
+            <form class="course-form login-form" method="post">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
                     <div class="form-errors">
@@ -43,6 +37,10 @@
                     <button class="btn-primary" type="submit">Ingresar</button>
                 </div>
             </form>
+            <div class="auth-switch auth-switch-compact">
+                <span>Olvidaste tu contraseña?</span>
+                <a href="{% url 'password_reset' %}">Recuperarla</a>
+            </div>
             <div class="auth-switch">
                 <span>No tienes cuenta?</span>
                 <a href="{% url 'student_signup' %}">Regístrate aquí</a>

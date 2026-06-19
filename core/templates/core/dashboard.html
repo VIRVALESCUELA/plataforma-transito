@@ -49,6 +49,22 @@
     </div>
 </article>
 
+{% if user.is_staff %}
+<section class="dashboard-section">
+    <article class="card">
+        <h2 style="margin-top: 0;">Gestion interna</h2>
+        <p style="max-width: 720px;">
+            Accesos administrativos para revisar inscripciones, alumnos y codigos de activacion.
+        </p>
+        <div style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <a class="btn" href="{% url 'core_web:manage-inscripciones' %}">Abrir inscripciones pendientes</a>
+            <a class="btn btn-outline" href="{% url 'core_web:staff-students' %}">Auditar alumnos</a>
+            <a class="btn btn-outline" href="{% url 'core_web:free-activation-codes' %}">Crear codigos libres</a>
+        </div>
+    </article>
+</section>
+{% endif %}
+
 <section class="dashboard-section">
     <article class="card {% if has_exam_access %}access-status-card{% endif %}">
         <h2 style="margin-top: 0;">Estado de acceso</h2>

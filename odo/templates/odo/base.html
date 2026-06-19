@@ -12,21 +12,22 @@
         display: grid;
         gap: 1rem;
         max-width: 100%;
-        padding: 1rem;
-        border: 1px solid rgba(31, 75, 66, 0.12);
-        border-radius: 16px;
-        background: linear-gradient(180deg, rgba(244, 239, 227, 0.72), rgba(232, 245, 233, 0.42));
+        padding: 1.5rem;
+        border: none;
+        border-radius: 18px;
+        background: var(--brand-green, #1f4b42);
+        color: #fff;
     }
     .odo-panel {
         min-width: 0;
         display: flex;
         flex-direction: column;
         background: #fff;
-        border: 1px solid rgba(31, 75, 66, 0.16);
-        border-top: 4px solid var(--brand-amber, #f4c64b);
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(31, 45, 61, 0.07);
-        padding: 1rem;
+        color: var(--brand-text, #1f2d3d);
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 20px 60px rgba(31, 45, 61, 0.08);
+        padding: 1.5rem;
     }
     .odo-header {
         display: grid;
@@ -36,7 +37,7 @@
     }
     .odo-title {
         margin: 0;
-        color: var(--brand-green, #1f4b42);
+        color: #fff;
         font-size: 1.7rem;
     }
     .odo-subtitle,
@@ -47,6 +48,7 @@
     }
     .odo-subtitle {
         margin: 0.35rem 0 0;
+        color: var(--brand-cream, #f4efe3);
     }
     .odo-nav {
         display: flex;
@@ -58,18 +60,18 @@
         align-items: center;
         min-height: 36px;
         padding: 0.45rem 0.7rem;
-        border: 1px solid rgba(31, 75, 66, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.35);
         border-radius: 999px;
-        color: var(--brand-green, #1f4b42);
+        color: #fff;
         font-weight: 800;
         text-decoration: none;
-        background: rgba(255, 255, 255, 0.78);
-        box-shadow: 0 6px 16px rgba(31, 75, 66, 0.08);
+        background: rgba(255, 255, 255, 0.14);
+        box-shadow: 0 8px 18px rgba(18, 53, 44, 0.24);
     }
     .odo-nav a:hover {
-        border-color: rgba(244, 198, 75, 0.82);
-        background: #fff8e1;
-        color: #12352c;
+        border-color: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.22);
+        color: #fff;
     }
     .odo-grid,
     .odo-two-col,
@@ -161,7 +163,7 @@
         min-width: 0;
         border: 1px solid rgba(31, 75, 66, 0.14);
         border-radius: 10px;
-        background: linear-gradient(135deg, rgba(232, 245, 233, 0.78), rgba(227, 242, 253, 0.58));
+        background: var(--brand-cream, #f4efe3);
         padding: 0.75rem;
     }
     .odo-status-box span {
@@ -266,7 +268,7 @@
             top: 0;
             z-index: 2;
             padding: 0.5rem 0;
-            background: rgba(244, 239, 227, 0.96);
+            background: rgba(31, 75, 66, 0.96);
         }
     }
 </style>
