@@ -1185,14 +1185,18 @@ class InscripcionManagementTests(TestCase):
         self.assertTrue(student.profile.has_active_exam_access())
         self.assertContains(response, "Se agregaron 30 dias")
 
-    def test_staff_dashboard_shows_link_to_management_view(self):
+    def test_staff_can_open_internal_management_view_from_dashboard_nav(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("core_web:dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Abrir inscripciones pendientes")
-        self.assertContains(response, "Auditar alumnos")
-        self.assertContains(response, "Crear codigos libres")
+        self.assertContains(response, reverse("core_web:internal-management"))
+
+        management_response = self.client.get(reverse("core_web:internal-management"))
+        self.assertEqual(management_response.status_code, 200)
+        self.assertContains(management_response, "Abrir inscripciones pendientes")
+        self.assertContains(management_response, "Auditar alumnos")
+        self.assertContains(management_response, "Crear codigos libres")
 
     def test_staff_can_view_student_audit_list_and_profile(self):
         self.client.force_login(self.staff)
