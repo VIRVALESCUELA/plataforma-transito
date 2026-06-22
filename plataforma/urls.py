@@ -63,6 +63,7 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
+    path("agendamiento/", include("agendamiento.urls")),
     path("odo/", include("odo.web_urls")),
     path("", include("core.web_urls")),
     path("api/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),

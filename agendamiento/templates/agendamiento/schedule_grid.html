@@ -1,0 +1,492 @@
+{% extends "core/base.html" %}
+{% block title %}Agendamiento de clases{% endblock %}
+
+{% block content %}
+<style>
+    .schedule-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    .schedule-toolbar label {
+        display: grid;
+        gap: 0.25rem;
+        font-weight: 800;
+    }
+    .schedule-toolbar input,
+    .schedule-toolbar select {
+        min-height: 40px;
+        padding: 0.45rem 0.65rem;
+    }
+    .resource-schedule {
+        margin-top: 1.25rem;
+    }
+    .resource-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+        margin-bottom: 0;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #cfd9d5;
+        border-bottom: 0;
+        border-left-width: 10px;
+        background: #f7faf8;
+    }
+    .resource-title h2 {
+        margin: 0;
+        font-size: 1.05rem;
+    }
+    .schedule-shell {
+        overflow: auto;
+        max-height: 74vh;
+        border: 1px solid #111;
+        background: #fff;
+    }
+    .schedule-grid {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-family: Arial, sans-serif;
+        font-size: 0.78rem;
+        box-shadow: none;
+    }
+    .schedule-grid th,
+    .schedule-grid td {
+        width: 68px;
+        min-width: 68px;
+        height: 25px;
+        padding: 0.1rem 0.16rem;
+        border: 1px solid #111;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .schedule-grid th {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        background: #eef4f1;
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .schedule-grid .date-col,
+    .schedule-grid .day-col {
+        position: sticky;
+        z-index: 5;
+        background: #fff;
+        font-weight: 900;
+    }
+    .schedule-grid .date-col {
+        left: 0;
+        width: 58px;
+        min-width: 58px;
+    }
+    .schedule-grid .day-col {
+        left: 58px;
+        width: 88px;
+        min-width: 88px;
+        text-align: left;
+        font-size: 0.72rem;
+        white-space: nowrap;
+    }
+    .schedule-grid thead .date-col,
+    .schedule-grid thead .day-col {
+        z-index: 8;
+    }
+    .schedule-cell {
+        border: 0;
+        background: transparent;
+        width: 100%;
+        min-height: 21px;
+        padding: 0;
+        color: #111;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 850;
+    }
+    .schedule-cell:hover {
+        outline: 2px solid #1e88e5;
+        outline-offset: -2px;
+    }
+    .cell-open {
+        background: #fff;
+    }
+    .cell-lesson {
+        background: #eefaf1;
+    }
+    .cell-lesson .schedule-cell {
+        color: #00a642;
+    }
+    .cell-completed .schedule-cell {
+        color: #111;
+    }
+    .cell-absent .schedule-cell {
+        color: #c62828;
+    }
+    .cell-school-suspended {
+        background: #f5a623;
+    }
+    .cell-student-rescheduled {
+        background: #6ed6d1;
+    }
+    .cell-opened {
+        background: #fff !important;
+    }
+    .cell-has-comment .schedule-cell {
+        position: relative;
+    }
+    .cell-has-comment .schedule-cell::after {
+        content: "";
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        width: 0;
+        height: 0;
+        border-top: 7px solid #1f4b42;
+        border-left: 7px solid transparent;
+    }
+    .cell-blocked,
+    .row-day-rule-blocked td:not(.date-col):not(.day-col),
+    .row-day-blocked td:not(.date-col):not(.day-col) {
+        background: #9a9a9a;
+        color: #111;
+    }
+    .row-day-rule-blocked .date-col,
+    .row-day-rule-blocked .day-col,
+    .row-day-blocked .date-col,
+    .row-day-blocked .day-col {
+        background: #9a9a9a;
+    }
+    .schedule-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    .schedule-modal {
+        border: 0;
+        border-radius: 10px;
+        padding: 0;
+        width: min(460px, calc(100vw - 2rem));
+        box-shadow: 0 28px 80px rgba(0,0,0,0.24);
+    }
+    .schedule-modal::backdrop {
+        background: rgba(0,0,0,0.35);
+    }
+    .schedule-modal form {
+        display: grid;
+        gap: 0.75rem;
+        padding: 1.25rem;
+    }
+    .schedule-modal header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+    }
+    .schedule-modal h2 {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+    .schedule-modal label {
+        display: grid;
+        gap: 0.3rem;
+        font-weight: 800;
+    }
+    .schedule-modal input,
+    .schedule-modal select,
+    .schedule-modal textarea {
+        min-height: 40px;
+        padding: 0.45rem 0.65rem;
+    }
+    .schedule-modal textarea {
+        min-height: 82px;
+        resize: vertical;
+    }
+    .schedule-modal menu {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        margin: 0;
+        padding: 0;
+    }
+    .btn-danger {
+        background: #c62828;
+    }
+</style>
+
+<section class="card">
+    <h1 style="margin-top: 0;">
+        {% if is_minimal_view %}Agendamiento 15 dias{% else %}Agendamiento de clases{% endif %}
+    </h1>
+
+    <form class="schedule-toolbar" method="get">
+        <label>
+            Desde
+            <input type="date" name="start" value="{{ start_date|date:'Y-m-d' }}">
+        </label>
+        {% if is_minimal_view %}
+            <input type="hidden" name="days" value="15">
+        {% else %}
+            <label>
+                Dias
+                <select name="days">
+                    {% for option in day_options %}
+                        <option value="{{ option }}" {% if option == day_count %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        {% endif %}
+        <button class="btn" type="submit">Ver rango</button>
+        {% if is_minimal_view %}
+            <a class="btn btn-outline" href="{% url 'agendamiento:minimal' %}">Hoy</a>
+            <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}?start={{ start_date|date:'Y-m-d' }}&days=60">Vista completa</a>
+        {% else %}
+            <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}">Hoy</a>
+            <a class="btn btn-outline" href="{% url 'agendamiento:minimal' %}?start={{ start_date|date:'Y-m-d' }}">Vista 15 dias</a>
+        {% endif %}
+        <a class="btn btn-outline" href="{% url 'agendamiento:search' %}">Buscar clases</a>
+        <a class="btn btn-outline" href="{% url 'agendamiento:resources' %}">Gestionar instructores/autos</a>
+    </form>
+
+    {% for schedule in schedules %}
+        <div class="resource-schedule">
+            <div class="resource-title" style="border-left-color: {{ schedule.resource.color }};">
+                <h2>{{ schedule.resource.name }}</h2>
+                <span class="meta">
+                    {% if schedule.resource.instructor %}{{ schedule.resource.instructor }}{% endif %}
+                    {% if schedule.resource.vehicle %} · {{ schedule.resource.vehicle }}{% endif %}
+                </span>
+            </div>
+            <div class="schedule-shell" aria-label="Grilla continua de clases {{ schedule.resource.name }}">
+                <table class="schedule-grid">
+                    <thead>
+                        <tr>
+                            <th class="date-col">DIA</th>
+                            <th class="day-col">Dias</th>
+                            {% for slot in slots %}
+                                <th>{{ slot.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in schedule.rows %}
+                    <tr class="{% if row.is_day_rule_blocked and not row.day_opening %}row-day-rule-blocked{% endif %} {% if row.day_block %}row-day-blocked{% endif %}">
+                        <td class="date-col">
+                            <button
+                                class="schedule-cell"
+                                type="button"
+                                data-action="day"
+                                data-resource="{{ schedule.resource.id }}"
+                                data-date="{{ row.date|date:'Y-m-d' }}"
+                                data-label="{{ row.label }} {{ row.weekday }}"
+                            >{{ row.label }}</button>
+                        </td>
+                        <td class="day-col">{{ row.weekday }}</td>
+                        {% for cell in row.cells %}
+                            <td class="cell-{{ cell.kind }} {% if cell.opening %}cell-opened{% endif %} {% if cell.lesson and cell.lesson.notes %}cell-has-comment{% elif cell.block and cell.block.reason %}cell-has-comment{% elif cell.opening and cell.opening.reason %}cell-has-comment{% endif %}">
+                                {% if row.day_block or cell.work_rule_blocked %}
+                                    <button
+                                        class="schedule-cell"
+                                        type="button"
+                                        data-action="blocked"
+                                        data-resource="{{ schedule.resource.id }}"
+                                        data-date="{{ row.date|date:'Y-m-d' }}"
+                                        data-slot="{{ cell.slot.key }}"
+                                        data-label="{{ row.label }} {{ row.weekday }} {{ cell.slot.label }}"
+                                        data-notes="{% if row.day_block %}{{ row.day_block.reason }}{% elif cell.opening %}{{ cell.opening.reason }}{% endif %}"
+                                    >{% if row.day_block %}{{ row.day_block.reason|default:"" }}{% else %}&nbsp;{% endif %}</button>
+                                {% else %}
+                                    <button
+                                        class="schedule-cell"
+                                        type="button"
+                                        data-action="cell"
+                                        data-resource="{{ schedule.resource.id }}"
+                                        data-date="{{ row.date|date:'Y-m-d' }}"
+                                        data-slot="{{ cell.slot.key }}"
+                                        data-slot-label="{{ cell.slot.label }}"
+                                        data-label="{{ row.label }} {{ row.weekday }} {{ cell.slot.label }}"
+                                        data-ficha="{% if cell.lesson %}{{ cell.lesson.ficha }}{% endif %}"
+                                        data-ficha-alumno="{% if cell.lesson and cell.lesson.ficha_alumno_id %}{{ cell.lesson.ficha_alumno_id }}{% endif %}"
+                                        data-lesson="{% if cell.lesson %}{{ cell.lesson.lesson_number }}{% endif %}"
+                                        data-course="{% if cell.lesson %}{{ cell.lesson.course_kind }}{% endif %}"
+                                        data-status="{% if cell.lesson %}{{ cell.lesson.status }}{% endif %}"
+                                        data-notes="{% if cell.lesson %}{{ cell.lesson.notes }}{% elif cell.block %}{{ cell.block.reason }}{% endif %}"
+                                        data-blocked="{% if cell.block or cell.work_rule_blocked %}1{% else %}0{% endif %}"
+                                    >
+                                        {% if cell.lesson %}
+                                            {{ cell.lesson.ficha }}/{{ cell.lesson.lesson_number }}
+                                        {% elif cell.work_rule_blocked %}
+                                            &nbsp;
+                                        {% elif cell.block %}
+                                            {{ cell.block.reason|default:"" }}
+                                        {% else %}
+                                            &nbsp;
+                                        {% endif %}
+                                    </button>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endfor %}
+</section>
+
+<dialog class="schedule-modal" id="lesson-modal">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="start" value="{{ start_date|date:'Y-m-d' }}">
+        <input type="hidden" name="days" value="{{ day_count }}">
+        <input type="hidden" name="date" id="modal-date">
+        <input type="hidden" name="slot_key" id="modal-slot">
+        <input type="hidden" name="resource_id" id="modal-resource">
+        <input type="hidden" name="action" id="modal-action" value="save_lesson">
+        <header>
+            <h2 id="modal-title">Agendar clase</h2>
+            <button class="btn btn-outline" type="button" data-close-modal>Cerrar</button>
+        </header>
+        <label>
+            Ficha existente
+            <select id="modal-ficha-alumno" name="ficha_alumno">
+                <option value="">Ingreso manual</option>
+                {% for ficha in fichas %}
+                    <option value="{{ ficha.id }}" data-numero="{{ ficha.numero_ficha }}">
+                        {{ ficha.numero_ficha }} - {{ ficha.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Ficha
+            <input id="modal-ficha" type="number" min="1" name="ficha" placeholder="5176">
+        </label>
+        <label>
+            Clase
+            <input id="modal-lesson" type="number" min="1" name="lesson_number" placeholder="1">
+        </label>
+        <label>
+            Curso
+            <select id="modal-course" name="course_kind">
+                {% for value, label in course_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Estado
+            <select id="modal-status" name="status">
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Comentario
+            <textarea id="modal-notes" name="notes" maxlength="240" placeholder="Opcional"></textarea>
+        </label>
+        <menu>
+            <button class="btn" type="submit" data-submit-action="save_lesson">Guardar clase</button>
+            <button class="btn btn-outline" type="submit" data-submit-action="update_comment">Guardar comentario</button>
+            <button class="btn btn-outline" type="submit" data-submit-action="block_slot">Bloquear horario</button>
+            <button class="btn btn-danger" type="submit" data-submit-action="delete_lesson">Liberar clase</button>
+            <button class="btn btn-outline" type="submit" data-submit-action="unblock">Quitar bloqueo</button>
+        </menu>
+    </form>
+</dialog>
+
+<dialog class="schedule-modal" id="day-modal">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="start" value="{{ start_date|date:'Y-m-d' }}">
+        <input type="hidden" name="days" value="{{ day_count }}">
+        <input type="hidden" name="date" id="day-date">
+        <input type="hidden" name="slot_key" value="">
+        <input type="hidden" name="resource_id" id="day-resource">
+        <input type="hidden" name="action" id="day-action" value="block_day">
+        <header>
+            <h2 id="day-title">Bloquear dia</h2>
+            <button class="btn btn-outline" type="button" data-close-modal>Cerrar</button>
+        </header>
+        <label>
+            Motivo
+            <input type="text" name="reason" maxlength="160" placeholder="Feriado, mantencion, cerrado">
+        </label>
+        <menu>
+            <button class="btn btn-danger" type="submit" data-day-action="block_day">Bloquear dia completo</button>
+            <button class="btn btn-outline" type="submit" data-day-action="unblock">Quitar bloqueo del dia</button>
+        </menu>
+    </form>
+</dialog>
+
+<script>
+    (function () {
+        const lessonModal = document.getElementById("lesson-modal");
+        const dayModal = document.getElementById("day-modal");
+        if (!lessonModal || !dayModal) {
+            return;
+        }
+
+        document.querySelectorAll("[data-close-modal]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                button.closest("dialog").close();
+            });
+        });
+
+        document.querySelectorAll("[data-submit-action]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                document.getElementById("modal-action").value = button.dataset.submitAction;
+            });
+        });
+
+        document.querySelectorAll("[data-day-action]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                document.getElementById("day-action").value = button.dataset.dayAction;
+            });
+        });
+
+        document.querySelectorAll("[data-action='cell'], [data-action='blocked']").forEach(function (cell) {
+            cell.addEventListener("click", function () {
+                document.getElementById("modal-title").textContent = cell.dataset.label;
+                document.getElementById("modal-resource").value = cell.dataset.resource;
+                document.getElementById("modal-date").value = cell.dataset.date;
+                document.getElementById("modal-slot").value = cell.dataset.slot;
+                document.getElementById("modal-ficha-alumno").value = cell.dataset.fichaAlumno || "";
+                document.getElementById("modal-ficha").value = cell.dataset.ficha || "";
+                document.getElementById("modal-lesson").value = cell.dataset.lesson || "";
+                document.getElementById("modal-course").value = cell.dataset.course || "12_MODULOS";
+                document.getElementById("modal-status").value = cell.dataset.status || "SCHEDULED";
+                document.getElementById("modal-notes").value = cell.dataset.notes || "";
+                document.getElementById("modal-action").value = "save_lesson";
+                lessonModal.showModal();
+            });
+        });
+
+        document.getElementById("modal-ficha-alumno").addEventListener("change", function (event) {
+            const selected = event.target.selectedOptions[0];
+            if (selected && selected.dataset.numero) {
+                document.getElementById("modal-ficha").value = selected.dataset.numero;
+            }
+        });
+
+        document.querySelectorAll("[data-action='day']").forEach(function (day) {
+            day.addEventListener("click", function () {
+                document.getElementById("day-title").textContent = day.dataset.label;
+                document.getElementById("day-resource").value = day.dataset.resource;
+                document.getElementById("day-date").value = day.dataset.date;
+                document.getElementById("day-action").value = "block_day";
+                dayModal.showModal();
+            });
+        });
+    }());
+</script>
+{% endblock %}

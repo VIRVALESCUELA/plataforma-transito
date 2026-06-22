@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'core',
     'odo',
+    'agendamiento',
 ]
 
 MIDDLEWARE = [

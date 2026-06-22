@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import ActivationCode, Inscripcion, Profile, UserRole
+from .models import ActivationCode, FichaAlumno, Inscripcion, Profile, UserRole
 from .services import activate_code_for_user
 
 
@@ -20,6 +20,22 @@ COURSE_CHOICES = [
     ("Help me!", "Help me!"),
     ("Full automatico", "Full automatico"),
 ]
+
+
+def normalize_chilean_whatsapp(value):
+    raw_value = (value or "").strip()
+    digits = "".join(char for char in raw_value if char.isdigit())
+    if not digits:
+        return ""
+    if digits.startswith("56"):
+        national = digits[2:]
+    elif digits.startswith("9"):
+        national = digits
+    else:
+        raise forms.ValidationError("Ingresa un WhatsApp chileno. Ej: +56 9 1234 5678.")
+    if len(national) != 9 or not national.startswith("9"):
+        raise forms.ValidationError("Ingresa un WhatsApp chileno. Ej: +56 9 1234 5678.")
+    return f"+56 {national[0]} {national[1:5]} {national[5:]}"
 
 
 class StudentSignupForm(UserCreationForm):
@@ -180,6 +196,58 @@ class InscripcionForm(forms.ModelForm):
             "nombre": forms.TextInput(attrs={"placeholder": "Ingresa tu nombre completo", "maxlength": 80}),
             "comuna": forms.TextInput(attrs={"placeholder": "Ej: Penalolen", "maxlength": 80}),
             "correo": forms.EmailInput(attrs={"placeholder": "tu@email.cl", "maxlength": 80}),
-            "telefono": forms.TextInput(attrs={"placeholder": "+56 9 1234 5678", "maxlength": 80}),
+            "telefono": forms.TextInput(
+                attrs={
+                    "type": "tel",
+                    "inputmode": "tel",
+                    "placeholder": "+56 9 1234 5678",
+                    "maxlength": 17,
+                    "autocomplete": "tel",
+                    "pattern": r"(\+?56\s?)?9\s?\d{4}\s?\d{4}",
+                    "title": "Formato esperado: +56 9 1234 5678",
+                }
+            ),
             "curso": forms.Select(),
         }
+
+    def clean_telefono(self):
+        return normalize_chilean_whatsapp(self.cleaned_data.get("telefono"))
+
+
+class FichaAlumnoForm(forms.ModelForm):
+    class Meta:
+        model = FichaAlumno
+        fields = [
+            "numero_ficha",
+            "fecha_inscripcion",
+            "nombre",
+            "correo",
+            "telefono",
+            "curso",
+            "rut",
+            "fecha_nacimiento",
+            "valor_pagado",
+            "forma_pago",
+            "observaciones",
+        ]
+        widgets = {
+            "numero_ficha": forms.NumberInput(attrs={"min": 1, "placeholder": "Automatico"}),
+            "fecha_inscripcion": forms.DateInput(attrs={"type": "date"}),
+            "correo": forms.EmailInput(attrs={"placeholder": "alumno@email.cl"}),
+            "telefono": forms.TextInput(
+                attrs={
+                    "type": "tel",
+                    "inputmode": "tel",
+                    "placeholder": "+56 9 1234 5678",
+                    "maxlength": 17,
+                    "autocomplete": "tel",
+                    "pattern": r"(\+?56\s?)?9\s?\d{4}\s?\d{4}",
+                    "title": "Formato esperado: +56 9 1234 5678",
+                }
+            ),
+            "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}),
+            "observaciones": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def clean_telefono(self):
+        return normalize_chilean_whatsapp(self.cleaned_data.get("telefono"))

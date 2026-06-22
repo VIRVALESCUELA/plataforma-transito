@@ -7,6 +7,7 @@ from .models import (
     ExamAttempt,
     ExamQuestion,
     ExamTemplate,
+    FichaAlumno,
     Inscripcion,
     Option,
     PageVisitCounter,
@@ -257,6 +258,24 @@ class InscripcionAdmin(admin.ModelAdmin):
         "user__email",
     )
     list_filter = ("curso", "comuna", "status")
+
+
+@admin.register(FichaAlumno)
+class FichaAlumnoAdmin(admin.ModelAdmin):
+    list_display = (
+        "numero_ficha",
+        "nombre",
+        "correo",
+        "rut",
+        "edad",
+        "curso",
+        "valor_pagado",
+        "forma_pago",
+        "fecha_inscripcion",
+    )
+    list_filter = ("curso", "forma_pago", "fecha_inscripcion")
+    search_fields = ("numero_ficha", "nombre", "correo", "rut", "telefono")
+    date_hierarchy = "fecha_inscripcion"
 
 
 @admin.register(PageVisitCounter)

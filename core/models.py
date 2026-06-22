@@ -91,6 +91,83 @@ class Inscripcion(models.Model):
         return any(keyword in course_name for keyword in online_keywords)
 
 
+class FichaAlumno(models.Model):
+    class FormaPago(models.TextChoices):
+        EFECTIVO = "EFECTIVO", "Efectivo"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+        TARJETA = "TARJETA", "Tarjeta"
+        MIXTO = "MIXTO", "Mixto"
+        OTRO = "OTRO", "Otro"
+
+    numero_ficha = models.PositiveIntegerField(unique=True, blank=True, null=True)
+    inscripcion = models.OneToOneField(
+        Inscripcion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ficha_alumno",
+    )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ficha_alumno",
+    )
+    fecha_inscripcion = models.DateField(default=timezone.localdate)
+    nombre = models.CharField(max_length=150)
+    correo = models.EmailField(blank=True)
+    telefono = models.CharField(max_length=30, blank=True)
+    curso = models.CharField(max_length=120, blank=True)
+    rut = models.CharField(max_length=20, blank=True)
+    fecha_nacimiento = models.DateField(null=True, blank=True)
+    edad = models.PositiveSmallIntegerField(null=True, blank=True)
+    valor_pagado = models.PositiveIntegerField(default=0)
+    forma_pago = models.CharField(
+        max_length=20,
+        choices=FormaPago.choices,
+        blank=True,
+    )
+    observaciones = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-fecha_inscripcion", "-numero_ficha"]
+        verbose_name = "Ficha de alumno"
+        verbose_name_plural = "Fichas de alumnos"
+
+    def __str__(self):
+        return f"{self.numero_ficha or 'sin ficha'} - {self.nombre}"
+
+    @classmethod
+    def next_numero_ficha(cls):
+        last_number = (
+            cls.objects.filter(numero_ficha__isnull=False)
+            .order_by("-numero_ficha")
+            .values_list("numero_ficha", flat=True)
+            .first()
+        )
+        return (last_number or 5000) + 1
+
+    def calcular_edad(self):
+        if not self.fecha_nacimiento:
+            return None
+        today = timezone.localdate()
+        edad = today.year - self.fecha_nacimiento.year
+        birthday_passed = (today.month, today.day) >= (
+            self.fecha_nacimiento.month,
+            self.fecha_nacimiento.day,
+        )
+        return edad if birthday_passed else edad - 1
+
+    def save(self, *args, **kwargs):
+        if self.numero_ficha is None:
+            self.numero_ficha = self.next_numero_ficha()
+        self.edad = self.calcular_edad()
+        super().save(*args, **kwargs)
+
+
 class PageVisitCounter(models.Model):
     page = models.CharField(max_length=120, unique=True)
     total = models.PositiveBigIntegerField(default=0)

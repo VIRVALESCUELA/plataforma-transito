@@ -1,0 +1,141 @@
+{% extends "core/base.html" %}
+{% block title %}Instructores y autos{% endblock %}
+
+{% block content %}
+<style>
+    .resource-form {
+        display: grid;
+        gap: 1rem;
+    }
+    .resource-form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 0.85rem 1rem;
+        align-items: end;
+    }
+    .resource-field {
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 800;
+    }
+    .resource-field input {
+        width: 100%;
+        min-height: 40px;
+        box-sizing: border-box;
+    }
+    .resource-field input[type="color"] {
+        padding: 0.15rem;
+    }
+    .resource-check {
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+        min-height: 40px;
+        font-weight: 800;
+    }
+    .resource-actions {
+        display: flex;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+    }
+    @media (max-width: 820px) {
+        .resource-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<a href="{% url 'agendamiento:grid' %}" class="btn btn-outline page-back-link">&larr; Volver a agendamiento</a>
+
+<section class="card">
+    <h1 style="margin-top: 0;">Instructores y autos</h1>
+    <form class="resource-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="{% if editing_resource %}edit{% else %}create{% endif %}">
+        {% if editing_resource %}
+            <input type="hidden" name="resource_id" value="{{ editing_resource.id }}">
+        {% endif %}
+        <div class="resource-form-grid">
+            {% for field in form %}
+                {% if field.name == "is_active" %}
+                    <label class="resource-check">
+                        {{ field }}
+                        {{ field.label }}
+                        {{ field.errors }}
+                    </label>
+                {% else %}
+                    <label class="resource-field">
+                        {{ field.label }}
+                        {{ field }}
+                        {{ field.errors }}
+                    </label>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="resource-actions">
+            <button class="btn" type="submit">
+                {% if editing_resource %}Guardar cambios{% else %}Crear grilla{% endif %}
+            </button>
+            {% if editing_resource %}
+                <a class="btn btn-outline" href="{% url 'agendamiento:resources' %}">Cancelar edicion</a>
+            {% endif %}
+        </div>
+    </form>
+</section>
+
+<section class="card" style="margin-top: 1.25rem;">
+    <h2 style="margin-top: 0;">Grillas creadas</h2>
+    {% if resources %}
+        <div class="sticky-table-wrap">
+            <table class="sticky-header-table">
+                <thead>
+                    <tr>
+                        <th>Orden</th>
+                        <th>Nombre</th>
+                        <th>Instructor</th>
+                        <th>Auto</th>
+                        <th>Color</th>
+                        <th>Estado</th>
+                        <th>Accion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for resource in resources %}
+                        <tr>
+                            <td>{{ resource.sort_order }}</td>
+                            <td><strong>{{ resource.name }}</strong></td>
+                            <td>{{ resource.instructor|default:"Sin instructor" }}</td>
+                            <td>{{ resource.vehicle|default:"Sin auto" }}</td>
+                            <td>
+                                <span style="display:inline-block; width:34px; height:18px; border:1px solid #cfd9d5; background:{{ resource.color }};"></span>
+                            </td>
+                            <td>
+                                {% if resource.is_active %}
+                                    <span class="meta" style="color:#2e7d32;">Activa</span>
+                                {% else %}
+                                    <span class="meta" style="color:#c62828;">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="resource-actions">
+                                    <a class="btn btn-outline" href="{% url 'agendamiento:resources' %}?edit={{ resource.id }}">Editar</a>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="resource_id" value="{{ resource.id }}">
+                                        <button class="btn btn-outline" type="submit">
+                                            {% if resource.is_active %}Desactivar{% else %}Activar{% endif %}
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay grillas creadas.</p>
+    {% endif %}
+</section>
+{% endblock %}

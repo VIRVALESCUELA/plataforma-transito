@@ -15,6 +15,7 @@ from .models import (
     ExamAttemptStatus,
     ExamQuestion,
     ExamTemplate,
+    FichaAlumno,
     Inscripcion,
     Option,
     PageVisitCounter,
@@ -1212,6 +1213,73 @@ class InscripcionManagementTests(TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertContains(detail_response, "Vista de auditoria solo lectura")
         self.assertContains(detail_response, "Examenes del alumno")
+
+    def test_staff_can_create_ficha_from_inscripcion(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("core_web:fichas"),
+            {
+                "action": "create_from_inscripcion",
+                "inscripcion_id": self.inscripcion.id,
+                "numero_ficha": "5176",
+                "fecha_inscripcion": "2026-06-01",
+                "nombre": self.inscripcion.nombre,
+                "correo": self.inscripcion.correo,
+                "telefono": self.inscripcion.telefono,
+                "curso": self.inscripcion.curso,
+                "rut": "12.345.678-9",
+                "fecha_nacimiento": "2000-06-01",
+                "valor_pagado": "120000",
+                "forma_pago": "TRANSFERENCIA",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core_web:fichas"))
+        ficha = FichaAlumno.objects.get(numero_ficha=5176)
+        self.assertEqual(ficha.inscripcion, self.inscripcion)
+        self.assertEqual(ficha.correo, self.inscripcion.correo)
+        self.assertEqual(ficha.valor_pagado, 120000)
+
+    def test_staff_can_edit_existing_ficha(self):
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5177,
+            nombre="Nombre Malo",
+            correo="mal@example.com",
+            telefono="+56 9 1111 2222",
+            curso="Curso intensivo",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("core_web:fichas") + f"?edit={ficha.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar ficha 5177")
+
+        response = self.client.post(
+            reverse("core_web:fichas"),
+            {
+                "action": "edit",
+                "ficha_id": ficha.id,
+                "numero_ficha": "5177",
+                "fecha_inscripcion": "2026-06-01",
+                "nombre": "Nombre Corregido",
+                "correo": "bien@example.com",
+                "telefono": "912345678",
+                "curso": "Curso intensivo",
+                "rut": "12.345.678-9",
+                "fecha_nacimiento": "2000-06-01",
+                "valor_pagado": "130000",
+                "forma_pago": "EFECTIVO",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core_web:fichas"))
+        ficha.refresh_from_db()
+        self.assertEqual(ficha.nombre, "Nombre Corregido")
+        self.assertEqual(ficha.correo, "bien@example.com")
+        self.assertEqual(ficha.telefono, "+56 9 1234 5678")
+        self.assertEqual(ficha.valor_pagado, 130000)
 
     def test_staff_can_audit_exam_detail_without_answer_actions(self):
         template = ExamTemplate.objects.create(

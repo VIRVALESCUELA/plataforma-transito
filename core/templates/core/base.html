@@ -39,6 +39,7 @@
                 <a href="{% url 'core_web:dashboard' %}">Mi panel</a>
                 {% if user.is_staff %}
                     <a href="{% url 'core_web:internal-management' %}">Gestion</a>
+                    <a href="{% url 'agendamiento:grid' %}">Agendamiento</a>
                     <a href="{% url 'odo_web:dashboard' %}">ODO</a>
                 {% endif %}
             {% endif %}

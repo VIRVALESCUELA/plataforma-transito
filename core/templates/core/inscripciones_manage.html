@@ -36,6 +36,7 @@
                         <th>Curso</th>
                         <th>Contacto</th>
                         <th>Estado</th>
+                        <th>Ficha</th>
                         <th>Cuenta</th>
                         <th>Codigo</th>
                         <th>Acciones</th>
@@ -62,6 +63,14 @@
                                         {% endfor %}
                                     </select>
                                 </form>
+                            </td>
+                            <td>
+                                {% if inscripcion.ficha_alumno %}
+                                    <strong>{{ inscripcion.ficha_alumno.numero_ficha }}</strong><br>
+                                    <span class="meta" style="color:#455a64;">{{ inscripcion.ficha_alumno.rut|default:"Sin rut" }}</span>
+                                {% else %}
+                                    <a class="btn btn-outline" href="{% url 'core_web:fichas' %}">Crear ficha</a>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if inscripcion.user %}

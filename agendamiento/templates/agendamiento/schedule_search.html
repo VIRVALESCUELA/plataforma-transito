@@ -1,0 +1,170 @@
+{% extends "core/base.html" %}
+{% block title %}Buscar clases{% endblock %}
+
+{% block content %}
+<style>
+    .schedule-search {
+        display: grid;
+        gap: 0.75rem;
+        padding: 0.85rem;
+        border: 1px solid #d8e4df;
+        background: #f7faf8;
+    }
+    .schedule-search form {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+    .schedule-search label {
+        display: grid;
+        gap: 0.25rem;
+        font-weight: 800;
+    }
+    .schedule-search input,
+    .schedule-search select {
+        min-height: 38px;
+        padding: 0.4rem 0.6rem;
+    }
+    .search-results {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        font-size: 0.86rem;
+    }
+    .search-results th,
+    .search-results td {
+        border: 1px solid #d8e4df;
+        padding: 0.35rem 0.45rem;
+        text-align: left;
+    }
+    .search-results th {
+        background: #eef4f1;
+    }
+    .search-empty {
+        margin: 0;
+        font-weight: 800;
+    }
+    .schedule-email-preview {
+        display: grid;
+        gap: 0.65rem;
+        padding: 0.75rem;
+        border: 1px solid #d8e4df;
+        background: #fff;
+    }
+    .schedule-email-preview h2 {
+        margin: 0;
+        font-size: 1rem;
+    }
+    .schedule-email-preview textarea {
+        width: 100%;
+        min-height: 150px;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid #cfd9d5;
+        font: inherit;
+        resize: vertical;
+    }
+    .schedule-email-preview form {
+        justify-content: flex-start;
+    }
+</style>
+
+<a href="{% url 'agendamiento:grid' %}" class="btn btn-outline page-back-link">&larr; Volver a agendamiento</a>
+
+<section class="card">
+    <h1 style="margin-top: 0;">Buscar clases</h1>
+    <div class="schedule-search">
+        <form method="get">
+            <input type="hidden" name="start" value="{{ start_date|date:'Y-m-d' }}">
+            <input type="hidden" name="days" value="{{ day_count }}">
+            <label>
+                Ficha
+                <input type="number" min="1" name="search_ficha" value="{{ search_ficha }}" placeholder="5176">
+            </label>
+            <label>
+                Fecha
+                <input type="date" name="search_date" value="{{ search_date }}">
+            </label>
+            <label>
+                Estado
+                <select name="search_status">
+                    <option value="">Todos</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if value == search_status %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="btn" type="submit">Buscar clase</button>
+            <a class="btn btn-outline" href="{% url 'agendamiento:search' %}?start={{ start_date|date:'Y-m-d' }}&days={{ day_count }}">Limpiar</a>
+        </form>
+        {% if has_search %}
+            {% if search_results %}
+                <table class="search-results">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Instructor / auto</th>
+                            <th>Ficha</th>
+                            <th>Estado</th>
+                            <th>Comentario</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in search_results %}
+                            <tr>
+                                <td>{{ result.date|date:"d/m/Y" }}</td>
+                                <td>{{ result.start_time|time:"H:i" }}</td>
+                                <td>{{ result.resource|default:"Sin recurso" }}</td>
+                                <td>{{ result.ficha }}/{{ result.lesson_number }}</td>
+                                <td>{{ result.get_status_display }}</td>
+                                <td>{{ result.notes|default:"" }}</td>
+                                <td>
+                                    <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}?start={{ result.date|date:'Y-m-d' }}&days=7">Ver en grilla</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="search-empty">No se encontraron clases con esos filtros.</p>
+            {% endif %}
+        {% endif %}
+        {% if search_ficha %}
+            <div class="schedule-email-preview">
+                <h2>Correo al alumno</h2>
+                {% if schedule_email_preview %}
+                    <textarea readonly>{{ schedule_email_preview }}</textarea>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="send_schedule_email">
+                        <input type="hidden" name="start" value="{{ start_date|date:'Y-m-d' }}">
+                        <input type="hidden" name="days" value="{{ day_count }}">
+                        <input type="hidden" name="ficha" value="{{ search_ficha }}">
+                        <button class="btn" type="submit" {% if not schedule_email_can_send %}disabled{% endif %}>
+                            Enviar correo
+                        </button>
+                        {% if schedule_whatsapp_url %}
+                            <a class="btn btn-outline" href="{{ schedule_whatsapp_url }}" target="_blank" rel="noopener">
+                                Enviar WhatsApp
+                            </a>
+                        {% endif %}
+                        {% if schedule_email_student and schedule_email_student.correo %}
+                            <span class="meta">{{ schedule_email_student.correo }}</span>
+                        {% else %}
+                            <span class="meta">Ficha sin correo registrado</span>
+                        {% endif %}
+                        {% if schedule_email_student and not schedule_whatsapp_url %}
+                            <span class="meta">Sin telefono WhatsApp valido</span>
+                        {% endif %}
+                    </form>
+                {% else %}
+                    <p class="search-empty">No hay clases futuras para preparar correo.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

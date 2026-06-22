@@ -21,12 +21,13 @@ from urllib.parse import quote
 import secrets
 import unicodedata
 
-from .forms import ActivationCodeForm, InscripcionForm, StudentSignupForm
+from .forms import ActivationCodeForm, FichaAlumnoForm, InscripcionForm, StudentSignupForm
 from .models import (
     ActivationCode,
     ExamAttempt,
     ExamAttemptStatus,
     ExamTemplate,
+    FichaAlumno,
     Inscripcion,
     PageVisitCounter,
     Profile,
@@ -318,7 +319,7 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             },
         ]
         context["inscripciones"] = (
-            Inscripcion.objects.select_related("activation_code", "user")
+            Inscripcion.objects.select_related("activation_code", "user", "ficha_alumno")
             .order_by("-created_at")
         )
         return context
@@ -540,6 +541,80 @@ class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView)
 
 class StaffInternalManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
     template_name = "core/staff_internal_management.html"
+
+
+class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/fichas_manage.html"
+
+    def _find_user_for_inscripcion(self, inscripcion):
+        if inscripcion.user_id:
+            return inscripcion.user
+        email = (inscripcion.correo or "").strip()
+        if not email:
+            return None
+        return (
+            User.objects.filter(Q(email__iexact=email) | Q(username__iexact=email))
+            .order_by("id")
+            .first()
+        )
+
+    def _initial_from_inscripcion(self, inscripcion):
+        return {
+            "fecha_inscripcion": timezone.localdate(inscripcion.created_at),
+            "nombre": inscripcion.nombre,
+            "correo": inscripcion.correo,
+            "telefono": inscripcion.telefono,
+            "curso": inscripcion.curso,
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        editing_ficha = kwargs.get("editing_ficha")
+        form = kwargs.get("form")
+        edit_id = self.request.GET.get("edit")
+        if editing_ficha is None and edit_id:
+            editing_ficha = get_object_or_404(FichaAlumno, pk=edit_id)
+        if form is None:
+            form = FichaAlumnoForm(instance=editing_ficha)
+        context["fichas"] = (
+            FichaAlumno.objects.select_related("inscripcion", "user")
+            .order_by("-numero_ficha")
+        )
+        context["inscripciones_sin_ficha"] = (
+            Inscripcion.objects.filter(ficha_alumno__isnull=True)
+            .select_related("user")
+            .order_by("-created_at")
+        )
+        context["form"] = form
+        context["editing_ficha"] = editing_ficha
+        return context
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        ficha = None
+        inscripcion = None
+        initial = {}
+
+        if action == "edit":
+            ficha = get_object_or_404(FichaAlumno, pk=request.POST.get("ficha_id"))
+        elif action == "create_from_inscripcion":
+            inscripcion = get_object_or_404(Inscripcion, pk=request.POST.get("inscripcion_id"))
+            initial = self._initial_from_inscripcion(inscripcion)
+
+        form = FichaAlumnoForm(request.POST or None, instance=ficha, initial=initial)
+        if not form.is_valid():
+            messages.error(request, "Revisa los datos de la ficha.")
+            return self.render_to_response(
+                self.get_context_data(form=form, editing_ficha=ficha)
+            )
+
+        ficha = form.save(commit=False)
+        if inscripcion is not None:
+            ficha.inscripcion = inscripcion
+            ficha.user = self._find_user_for_inscripcion(inscripcion)
+        ficha.save()
+        messages.success(request, f"Ficha {ficha.numero_ficha} guardada.")
+        return redirect("core_web:fichas")
 
 
 class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
