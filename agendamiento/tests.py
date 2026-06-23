@@ -88,7 +88,13 @@ class ScheduleGridTests(TestCase):
             nombre="Alumno Correo",
             correo="alumno@example.com",
         )
+        resource = ScheduleResource.objects.create(
+            name="Auto 1",
+            instructor="Instructor Correo",
+            vehicle="ABC123",
+        )
         DrivingLesson.objects.create(
+            resource=resource,
             date="2026-07-01",
             slot_key="0900",
             start_time=time(9, 0),
@@ -99,6 +105,7 @@ class ScheduleGridTests(TestCase):
             created_by=self.staff,
         )
         DrivingLesson.objects.create(
+            resource=resource,
             date="2026-07-02",
             slot_key="0945",
             start_time=time(9, 45),
@@ -124,8 +131,51 @@ class ScheduleGridTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["alumno@example.com"])
         self.assertIn("Tus clases practicas agendadas", mail.outbox[0].subject)
+        self.assertIn("Instructor: Instructor Correo", mail.outbox[0].body)
+        self.assertIn("Dias y horas agendadas:", mail.outbox[0].body)
         self.assertIn("Clase 1: 01/07/2026 a las 09:00", mail.outbox[0].body)
         self.assertIn("Clase 2: 02/07/2026 a las 09:45", mail.outbox[0].body)
+        self.assertIn(
+            "Cualquier cambio debe solicitarse con 48 horas de anticipacion.",
+            mail.outbox[0].body,
+        )
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        DEFAULT_FROM_EMAIL="Escuela Virval <virvalescuela@gmail.com>",
+    )
+    def test_staff_can_edit_schedule_email_body_before_sending(self):
+        FichaAlumno.objects.create(
+            numero_ficha=5181,
+            nombre="Alumno Editado",
+            correo="editado@example.com",
+        )
+        DrivingLesson.objects.create(
+            date="2026-07-03",
+            slot_key="0900",
+            start_time=time(9, 0),
+            end_time=time(9, 45),
+            ficha=5181,
+            lesson_number=1,
+            course_kind="12_MODULOS",
+            created_by=self.staff,
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("agendamiento:search"),
+            {
+                "action": "send_schedule_email",
+                "start": "2026-07-01",
+                "days": "7",
+                "ficha": "5181",
+                "schedule_email_body": "Mensaje personalizado para este alumno.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].body, "Mensaje personalizado para este alumno.")
 
     def test_staff_can_open_whatsapp_message_for_ficha(self):
         FichaAlumno.objects.create(

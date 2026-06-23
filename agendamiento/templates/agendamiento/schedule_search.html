@@ -136,13 +136,13 @@
             <div class="schedule-email-preview">
                 <h2>Correo al alumno</h2>
                 {% if schedule_email_preview %}
-                    <textarea readonly>{{ schedule_email_preview }}</textarea>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="send_schedule_email">
                         <input type="hidden" name="start" value="{{ start_date|date:'Y-m-d' }}">
                         <input type="hidden" name="days" value="{{ day_count }}">
                         <input type="hidden" name="ficha" value="{{ search_ficha }}">
+                        <textarea name="schedule_email_body">{{ schedule_email_preview }}</textarea>
                         <button class="btn" type="submit" {% if not schedule_email_can_send %}disabled{% endif %}>
                             Enviar correo
                         </button>

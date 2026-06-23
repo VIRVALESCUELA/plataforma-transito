@@ -224,21 +224,29 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
         lines = [
             f"Hola {nombre},",
             "",
-            "Estas son tus clases practicas agendadas:",
-            "",
         ]
+        instructors = []
+        for lesson in lessons:
+            instructor = lesson.resource.instructor if lesson.resource and lesson.resource.instructor else ""
+            if instructor and instructor not in instructors:
+                instructors.append(instructor)
+        if len(instructors) == 1:
+            lines.extend([f"Instructor: {instructors[0]}", ""])
+        elif len(instructors) > 1:
+            lines.extend([f"Instructores: {', '.join(instructors)}", ""])
+
+        lines.extend(["Dias y horas agendadas:", ""])
         for lesson in lessons:
             status = "" if lesson.status == LessonStatus.SCHEDULED else f" ({lesson.get_status_display()})"
-            resource = f" - {lesson.resource.name}" if lesson.resource else ""
             lines.append(
                 f"Clase {lesson.lesson_number}: {lesson.date.strftime('%d/%m/%Y')} "
-                f"a las {lesson.start_time.strftime('%H:%M')}{resource}{status}"
+                f"a las {lesson.start_time.strftime('%H:%M')}{status}"
             )
 
         lines.extend(
             [
                 "",
-                "Ante cualquier duda o cambio, contactanos por los canales oficiales.",
+                "Ante cualquier duda, contactanos por los canales oficiales. Cualquier cambio debe solicitarse con 48 horas de anticipacion.",
                 "",
                 "Virval Escuela de Conductores",
             ]
@@ -603,6 +611,10 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
             return self._redirect_to_search_ficha(ficha_raw)
         if not lessons:
             messages.error(request, "No hay clases futuras para informar.")
+            return self._redirect_to_search_ficha(ficha_raw)
+        body = (request.POST.get("schedule_email_body") or body).strip()
+        if not body:
+            messages.error(request, "El mensaje del correo no puede estar vacio.")
             return self._redirect_to_search_ficha(ficha_raw)
 
         send_mail(
