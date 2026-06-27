@@ -8,6 +8,7 @@ from .models import (
     ExamQuestion,
     ExamTemplate,
     FichaAlumno,
+    FichaMovimiento,
     Inscripcion,
     Option,
     PageVisitCounter,
@@ -242,6 +243,8 @@ class InscripcionAdmin(admin.ModelAdmin):
         "nombre",
         "curso",
         "status",
+        "comuna",
+        "direccion",
         "correo",
         "telefono",
         "user",
@@ -254,6 +257,7 @@ class InscripcionAdmin(admin.ModelAdmin):
         "telefono",
         "curso",
         "comuna",
+        "direccion",
         "user__username",
         "user__email",
     )
@@ -266,6 +270,7 @@ class FichaAlumnoAdmin(admin.ModelAdmin):
         "numero_ficha",
         "nombre",
         "correo",
+        "direccion",
         "rut",
         "edad",
         "curso",
@@ -274,8 +279,28 @@ class FichaAlumnoAdmin(admin.ModelAdmin):
         "fecha_inscripcion",
     )
     list_filter = ("curso", "forma_pago", "fecha_inscripcion")
-    search_fields = ("numero_ficha", "nombre", "correo", "rut", "telefono")
+    search_fields = ("numero_ficha", "nombre", "correo", "rut", "telefono", "direccion")
     date_hierarchy = "fecha_inscripcion"
+
+
+@admin.register(FichaMovimiento)
+class FichaMovimientoAdmin(admin.ModelAdmin):
+    list_display = (
+        "ficha",
+        "fecha",
+        "tipo",
+        "concepto",
+        "monto",
+        "forma_pago",
+    )
+    list_filter = ("tipo", "forma_pago", "fecha")
+    search_fields = (
+        "ficha__numero_ficha",
+        "ficha__nombre",
+        "concepto",
+        "observaciones",
+    )
+    date_hierarchy = "fecha"
 
 
 @admin.register(PageVisitCounter)

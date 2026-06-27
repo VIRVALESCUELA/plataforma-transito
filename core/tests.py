@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .forms import FichaAlumnoForm, FichaMovimientoForm
 from .models import (
     ActivationCode,
     ExamAttempt,
@@ -16,6 +17,7 @@ from .models import (
     ExamQuestion,
     ExamTemplate,
     FichaAlumno,
+    FichaMovimiento,
     Inscripcion,
     Option,
     PageVisitCounter,
@@ -143,6 +145,7 @@ class InscripcionTests(TestCase):
         payload = {
             "nombre": "Test Alumno",
             "comuna": "Santiago",
+            "direccion": "Av. Principal 1234",
             "correo": "test@example.com",
             "telefono": "+56 9 1234 5678",
             "curso": "Curso base mecanico",
@@ -153,15 +156,21 @@ class InscripcionTests(TestCase):
         self.assertTrue(
             Inscripcion.objects.filter(nombre="Test Alumno", correo="test@example.com").exists()
         )
+        self.assertEqual(
+            Inscripcion.objects.get(nombre="Test Alumno").direccion,
+            "Av. Principal 1234",
+        )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["virvalescuela@gmail.com"])
         self.assertIn("Test Alumno", mail.outbox[0].body)
+        self.assertIn("Av. Principal 1234", mail.outbox[0].body)
         self.assertIn("Curso base mecanico", mail.outbox[0].body)
 
     def test_duplicate_inscripcion_post_reuses_recent_record(self):
         payload = {
             "nombre": "Test Alumno",
             "comuna": "Santiago",
+            "direccion": "Av. Principal 1234",
             "correo": "test@example.com",
             "telefono": "+56 9 1234 5678",
             "curso": "Curso base mecanico",
@@ -185,6 +194,41 @@ class InscripcionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'option value="Curso intensivo" selected')
+
+
+class FichaAlumnoFormTests(TestCase):
+    def test_course_field_is_select_with_balance_products(self):
+        form = FichaAlumnoForm()
+
+        choices = dict(form.fields["curso"].choices)
+
+        self.assertIn("Clase extra", choices)
+        self.assertIn("Ensayo sicotecnico", choices)
+        self.assertIn("Simulador", choices)
+        self.assertIn("Libro", choices)
+
+    def test_course_field_preserves_legacy_value_when_editing(self):
+        ficha = FichaAlumno.objects.create(
+            nombre="Alumno antiguo",
+            curso="Producto historico",
+        )
+        form = FichaAlumnoForm(instance=ficha)
+
+        self.assertIn("Producto historico", dict(form.fields["curso"].choices))
+
+    def test_movimiento_form_classifies_concept(self):
+        form = FichaMovimientoForm(
+            data={
+                "fecha": "2026-06-01",
+                "concepto": "Clase extra",
+                "monto": "25000",
+                "forma_pago": "EFECTIVO",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        movimiento = form.save(commit=False)
+        self.assertEqual(movimiento.tipo, FichaMovimiento.Tipo.CLASE_EXTRA)
 
 
 class ExamApiSecurityTests(TestCase):
@@ -1192,10 +1236,15 @@ class InscripcionManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("core_web:internal-management"))
+        self.assertNotContains(response, reverse("balance:dashboard"))
+        self.assertNotContains(response, reverse("agendamiento:grid"))
 
         management_response = self.client.get(reverse("core_web:internal-management"))
         self.assertEqual(management_response.status_code, 200)
-        self.assertContains(management_response, "Abrir inscripciones pendientes")
+        self.assertContains(management_response, "Inscripciones pendientes")
+        self.assertContains(management_response, "Gestionar fichas")
+        self.assertContains(management_response, "Balance mensual")
+        self.assertContains(management_response, "Agendamiento")
         self.assertContains(management_response, "Auditar alumnos")
         self.assertContains(management_response, "Crear codigos libres")
 
@@ -1227,6 +1276,7 @@ class InscripcionManagementTests(TestCase):
                 "nombre": self.inscripcion.nombre,
                 "correo": self.inscripcion.correo,
                 "telefono": self.inscripcion.telefono,
+                "direccion": "Av. Principal 1234",
                 "curso": self.inscripcion.curso,
                 "rut": "12.345.678-9",
                 "fecha_nacimiento": "2000-06-01",
@@ -1239,7 +1289,11 @@ class InscripcionManagementTests(TestCase):
         ficha = FichaAlumno.objects.get(numero_ficha=5176)
         self.assertEqual(ficha.inscripcion, self.inscripcion)
         self.assertEqual(ficha.correo, self.inscripcion.correo)
+        self.assertEqual(ficha.direccion, "Av. Principal 1234")
         self.assertEqual(ficha.valor_pagado, 120000)
+        movimiento = ficha.movimientos.get()
+        self.assertEqual(movimiento.concepto, self.inscripcion.curso)
+        self.assertEqual(movimiento.monto, 120000)
 
     def test_staff_can_edit_existing_ficha(self):
         ficha = FichaAlumno.objects.create(
@@ -1280,6 +1334,38 @@ class InscripcionManagementTests(TestCase):
         self.assertEqual(ficha.correo, "bien@example.com")
         self.assertEqual(ficha.telefono, "+56 9 1234 5678")
         self.assertEqual(ficha.valor_pagado, 130000)
+        movimiento = ficha.movimientos.get()
+        self.assertEqual(movimiento.concepto, "Curso intensivo")
+        self.assertEqual(movimiento.monto, 130000)
+
+    def test_staff_can_add_movimiento_to_existing_ficha(self):
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5178,
+            nombre="Alumno con extra",
+            correo="extra@example.com",
+            curso="Curso base mecanico",
+            valor_pagado=180000,
+        )
+        FichaMovimiento.sync_pago_inicial(ficha)
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("core_web:fichas"),
+            {
+                "action": "add_movimiento",
+                "ficha_id": ficha.id,
+                "fecha": "2026-06-10",
+                "concepto": "Clase extra",
+                "monto": "25000",
+                "forma_pago": "TRANSFERENCIA",
+                "observaciones": "Clase extra ficha 5178",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core_web:fichas") + f"?edit={ficha.id}")
+        extra = ficha.movimientos.get(concepto="Clase extra")
+        self.assertEqual(extra.tipo, FichaMovimiento.Tipo.CLASE_EXTRA)
+        self.assertEqual(extra.monto, 25000)
 
     def test_staff_can_audit_exam_detail_without_answer_actions(self):
         template = ExamTemplate.objects.create(

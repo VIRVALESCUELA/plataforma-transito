@@ -10,7 +10,7 @@ from django.core.validators import validate_email
 from django.conf import settings
 from django.db import DatabaseError
 from django.db import transaction
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -21,13 +21,20 @@ from urllib.parse import quote
 import secrets
 import unicodedata
 
-from .forms import ActivationCodeForm, FichaAlumnoForm, InscripcionForm, StudentSignupForm
+from .forms import (
+    ActivationCodeForm,
+    FichaAlumnoForm,
+    FichaMovimientoForm,
+    InscripcionForm,
+    StudentSignupForm,
+)
 from .models import (
     ActivationCode,
     ExamAttempt,
     ExamAttemptStatus,
     ExamTemplate,
     FichaAlumno,
+    FichaMovimiento,
     Inscripcion,
     PageVisitCounter,
     Profile,
@@ -164,6 +171,7 @@ class InscripcionCreateView(FormView):
             Inscripcion.objects.filter(
                 nombre__iexact=data["nombre"].strip(),
                 comuna__iexact=data["comuna"].strip(),
+                direccion__iexact=(data.get("direccion") or "").strip(),
                 correo__iexact=data["correo"].strip(),
                 telefono=data["telefono"].strip(),
                 curso=data.get("curso") or "",
@@ -191,6 +199,7 @@ class InscripcionCreateView(FormView):
             "Nueva inscripcion de curso:\n"
             f"Nombre: {inscripcion.nombre}\n"
             f"Comuna: {inscripcion.comuna}\n"
+            f"Direccion: {inscripcion.direccion or 'No especificada'}\n"
             f"Correo: {inscripcion.correo}\n"
             f"Telefono: {inscripcion.telefono}\n"
             f"Curso: {curso}"
@@ -564,6 +573,7 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             "nombre": inscripcion.nombre,
             "correo": inscripcion.correo,
             "telefono": inscripcion.telefono,
+            "direccion": inscripcion.direccion,
             "curso": inscripcion.curso,
         }
 
@@ -578,6 +588,11 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             form = FichaAlumnoForm(instance=editing_ficha)
         context["fichas"] = (
             FichaAlumno.objects.select_related("inscripcion", "user")
+            .prefetch_related("movimientos")
+            .annotate(
+                total_movimientos=Sum("movimientos__monto"),
+                cantidad_movimientos=Count("movimientos", distinct=True),
+            )
             .order_by("-numero_ficha")
         )
         context["inscripciones_sin_ficha"] = (
@@ -586,11 +601,29 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             .order_by("-created_at")
         )
         context["form"] = form
+        context["movimiento_form"] = kwargs.get("movimiento_form") or FichaMovimientoForm()
         context["editing_ficha"] = editing_ficha
         return context
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
+        if action == "add_movimiento":
+            ficha = get_object_or_404(FichaAlumno, pk=request.POST.get("ficha_id"))
+            movimiento_form = FichaMovimientoForm(request.POST)
+            if not movimiento_form.is_valid():
+                messages.error(request, "Revisa los datos del movimiento.")
+                return self.render_to_response(
+                    self.get_context_data(
+                        editing_ficha=ficha,
+                        movimiento_form=movimiento_form,
+                    )
+                )
+            movimiento = movimiento_form.save(commit=False)
+            movimiento.ficha = ficha
+            movimiento.save()
+            messages.success(request, f"Movimiento agregado a ficha {ficha.numero_ficha}.")
+            return redirect(f"{reverse('core_web:fichas')}?edit={ficha.id}")
+
         ficha = None
         inscripcion = None
         initial = {}
@@ -613,6 +646,7 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             ficha.inscripcion = inscripcion
             ficha.user = self._find_user_for_inscripcion(inscripcion)
         ficha.save()
+        FichaMovimiento.sync_pago_inicial(ficha)
         messages.success(request, f"Ficha {ficha.numero_ficha} guardada.")
         return redirect("core_web:fichas")
 

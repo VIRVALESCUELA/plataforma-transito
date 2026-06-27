@@ -51,6 +51,9 @@
                             <td>
                                 {{ inscripcion.correo }}<br>
                                 <span class="meta" style="color:#455a64;">{{ inscripcion.telefono }}</span>
+                                {% if inscripcion.direccion %}
+                                    <br><span class="meta" style="color:#455a64;">{{ inscripcion.direccion }}</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <form method="post" class="inline">

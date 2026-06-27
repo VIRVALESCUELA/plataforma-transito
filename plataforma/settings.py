@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     'core',
     'odo',
     'agendamiento',
+    'balance',
 ]
 
 MIDDLEWARE = [

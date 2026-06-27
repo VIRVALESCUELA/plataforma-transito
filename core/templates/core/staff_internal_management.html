@@ -2,18 +2,214 @@
 {% block title %}Gestion interna{% endblock %}
 
 {% block content %}
-<a href="{% url 'core_web:dashboard' %}" class="btn btn-outline page-back-link">&larr; Volver al panel</a>
+<style>
+    .internal-shell {
+        max-width: 980px;
+        margin: 0 auto;
+        display: grid;
+        gap: 1.25rem;
+    }
+    .internal-header {
+        background: #1f4b42;
+        color: #fff;
+        border-radius: 8px;
+        padding: 1.6rem;
+        display: grid;
+        gap: 0.75rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    }
+    .internal-header h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+    }
+    .internal-header p {
+        margin: 0;
+        max-width: 720px;
+        color: #d8eee8;
+        line-height: 1.55;
+    }
+    .internal-menu {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .internal-menu-item {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-left: 5px solid var(--brand-blue);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--brand-text);
+        text-decoration: none;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .internal-menu-item:hover {
+        transform: translateY(-2px);
+        border-color: rgba(25, 118, 210, 0.45);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    }
+    .internal-menu-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: #e3f2fd;
+        color: #0d47a1;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+    .internal-menu-item.is-inscripciones {
+        border-left-color: #2e7d32;
+        background: #f7fbf8;
+    }
+    .internal-menu-item.is-inscripciones .internal-menu-icon {
+        background: #e8f5e9;
+        color: #1b5e20;
+    }
+    .internal-menu-item.is-fichas {
+        border-left-color: #1976d2;
+        background: #f7fbff;
+    }
+    .internal-menu-item.is-fichas .internal-menu-icon {
+        background: #e3f2fd;
+        color: #0d47a1;
+    }
+    .internal-menu-item.is-agenda {
+        border-left-color: #00838f;
+        background: #f4fbfc;
+    }
+    .internal-menu-item.is-agenda .internal-menu-icon {
+        background: #e0f7fa;
+        color: #006064;
+    }
+    .internal-menu-item.is-auditoria {
+        border-left-color: #6a1b9a;
+        background: #fbf7ff;
+    }
+    .internal-menu-item.is-auditoria .internal-menu-icon {
+        background: #f3e5f5;
+        color: #4a148c;
+    }
+    .internal-menu-item.is-codigos {
+        border-left-color: #ef6c00;
+        background: #fffaf3;
+    }
+    .internal-menu-item.is-codigos .internal-menu-icon {
+        background: #fff3e0;
+        color: #e65100;
+    }
+    .internal-menu-item.is-balance {
+        border-left-color: #8a6d3b;
+        background: #fffdf7;
+    }
+    .internal-menu-item.is-balance .internal-menu-icon {
+        background: #fff8e1;
+        color: #7a5a00;
+    }
+    .internal-menu-copy {
+        display: grid;
+        gap: 0.25rem;
+        min-width: 0;
+    }
+    .internal-menu-title {
+        font-weight: 800;
+        font-size: 1.05rem;
+    }
+    .internal-menu-detail {
+        color: #455a64;
+        line-height: 1.45;
+    }
+    .internal-menu-action {
+        color: var(--brand-blue);
+        font-weight: 800;
+        white-space: nowrap;
+    }
+    @media (max-width: 640px) {
+        .internal-header {
+            padding: 1.25rem;
+        }
+        .internal-menu-item {
+            grid-template-columns: 44px minmax(0, 1fr);
+        }
+        .internal-menu-action {
+            grid-column: 2;
+            white-space: normal;
+        }
+        .internal-menu-icon {
+            width: 44px;
+            height: 44px;
+        }
+    }
+</style>
 
-<section class="card">
-    <h1 style="margin-top: 0;">Gestion interna</h1>
-    <p style="max-width: 720px;">
-        Accede a la bandeja comercial y al modo auditoria para revisar alumnos, examenes y preguntas sin modificar respuestas.
-    </p>
-    <div style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
-        <a class="btn" href="{% url 'core_web:manage-inscripciones' %}">Abrir inscripciones pendientes</a>
-        <a class="btn btn-outline" href="{% url 'core_web:fichas' %}">Gestionar fichas</a>
-        <a class="btn btn-outline" href="{% url 'core_web:staff-students' %}">Auditar alumnos</a>
-        <a class="btn btn-outline" href="{% url 'core_web:free-activation-codes' %}">Crear codigos libres</a>
-    </div>
-</section>
+<div class="internal-shell">
+    <section class="internal-header">
+        <span class="pill" style="width: fit-content; background: rgba(227,242,253,0.95); color: #0d47a1;">Panel administrativo</span>
+        <h1>Gestion interna</h1>
+        <p>
+            Centro de control para solicitudes, fichas, agenda, balance y auditoria de alumnos.
+        </p>
+    </section>
+
+    <nav class="internal-menu" aria-label="Menu de gestion interna">
+        <a class="internal-menu-item is-inscripciones" href="{% url 'core_web:manage-inscripciones' %}">
+            <span class="internal-menu-icon" aria-hidden="true">IP</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Inscripciones pendientes</span>
+                <span class="internal-menu-detail">Bandeja comercial, estados, codigos asociados y solicitudes por contactar.</span>
+            </span>
+            <span class="internal-menu-action">Abrir</span>
+        </a>
+
+        <a class="internal-menu-item is-fichas" href="{% url 'core_web:fichas' %}">
+            <span class="internal-menu-icon" aria-hidden="true">GF</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Gestionar fichas</span>
+                <span class="internal-menu-detail">Crear fichas desde inscripciones, editar datos y revisar pagos registrados.</span>
+            </span>
+            <span class="internal-menu-action">Gestionar</span>
+        </a>
+
+        <a class="internal-menu-item is-agenda" href="{% url 'agendamiento:grid' %}">
+            <span class="internal-menu-icon" aria-hidden="true">AG</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Agendamiento</span>
+                <span class="internal-menu-detail">Organizar clases, disponibilidad y coordinacion practica desde la grilla.</span>
+            </span>
+            <span class="internal-menu-action">Abrir agenda</span>
+        </a>
+
+        <a class="internal-menu-item is-auditoria" href="{% url 'core_web:staff-students' %}">
+            <span class="internal-menu-icon" aria-hidden="true">AA</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Auditar alumnos</span>
+                <span class="internal-menu-detail">Revisar accesos, intentos de examen, avances y resultados sin modificar respuestas.</span>
+            </span>
+            <span class="internal-menu-action">Auditar</span>
+        </a>
+
+        <a class="internal-menu-item is-codigos" href="{% url 'core_web:free-activation-codes' %}">
+            <span class="internal-menu-icon" aria-hidden="true">CL</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Crear codigos libres</span>
+                <span class="internal-menu-detail">Generar lotes de codigos de activacion para cursos y accesos especiales.</span>
+            </span>
+            <span class="internal-menu-action">Crear</span>
+        </a>
+
+        <a class="internal-menu-item is-balance" href="{% url 'balance:dashboard' %}">
+            <span class="internal-menu-icon" aria-hidden="true">BM</span>
+            <span class="internal-menu-copy">
+                <span class="internal-menu-title">Balance mensual</span>
+                <span class="internal-menu-detail">Revisar ingresos, movimientos y resumen financiero del periodo.</span>
+            </span>
+            <span class="internal-menu-action">Ver balance</span>
+        </a>
+    </nav>
+</div>
 {% endblock %}

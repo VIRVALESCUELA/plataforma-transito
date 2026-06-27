@@ -94,6 +94,7 @@ def send_inscripcion_notification_email(inscripcion):
         "Nueva solicitud de inscripcion de curso:\n\n"
         f"Nombre: {inscripcion.nombre}\n"
         f"Comuna: {inscripcion.comuna}\n"
+        f"Direccion: {inscripcion.direccion or 'No especificada'}\n"
         f"Correo: {inscripcion.correo}\n"
         f"Telefono: {inscripcion.telefono}\n"
         f"Curso: {curso}\n"

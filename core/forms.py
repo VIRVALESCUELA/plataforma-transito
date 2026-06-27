@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import ActivationCode, FichaAlumno, Inscripcion, Profile, UserRole
+from .models import ActivationCode, FichaAlumno, FichaMovimiento, Inscripcion, Profile, UserRole
 from .services import activate_code_for_user
 
 
@@ -19,6 +19,13 @@ COURSE_CHOICES = [
     ("Teorico promo Instagram", "Teorico promo Instagram"),
     ("Help me!", "Help me!"),
     ("Full automatico", "Full automatico"),
+]
+
+FICHA_COURSE_CHOICES = COURSE_CHOICES + [
+    ("Clase extra", "Clase extra"),
+    ("Ensayo sicotecnico", "Ensayo sicotecnico"),
+    ("Simulador", "Simulador"),
+    ("Libro", "Libro"),
 ]
 
 
@@ -191,10 +198,11 @@ class InscripcionForm(forms.ModelForm):
 
     class Meta:
         model = Inscripcion
-        fields = ["nombre", "comuna", "correo", "telefono", "curso"]
+        fields = ["nombre", "comuna", "direccion", "correo", "telefono", "curso"]
         widgets = {
             "nombre": forms.TextInput(attrs={"placeholder": "Ingresa tu nombre completo", "maxlength": 80}),
             "comuna": forms.TextInput(attrs={"placeholder": "Ej: Penalolen", "maxlength": 80}),
+            "direccion": forms.TextInput(attrs={"placeholder": "Ej: Av. Principal 1234", "maxlength": 120}),
             "correo": forms.EmailInput(attrs={"placeholder": "tu@email.cl", "maxlength": 80}),
             "telefono": forms.TextInput(
                 attrs={
@@ -215,6 +223,12 @@ class InscripcionForm(forms.ModelForm):
 
 
 class FichaAlumnoForm(forms.ModelForm):
+    curso = forms.ChoiceField(
+        choices=FICHA_COURSE_CHOICES,
+        required=False,
+        label="Curso / producto",
+    )
+
     class Meta:
         model = FichaAlumno
         fields = [
@@ -223,6 +237,7 @@ class FichaAlumnoForm(forms.ModelForm):
             "nombre",
             "correo",
             "telefono",
+            "direccion",
             "curso",
             "rut",
             "fecha_nacimiento",
@@ -234,6 +249,7 @@ class FichaAlumnoForm(forms.ModelForm):
             "numero_ficha": forms.NumberInput(attrs={"min": 1, "placeholder": "Automatico"}),
             "fecha_inscripcion": forms.DateInput(attrs={"type": "date"}),
             "correo": forms.EmailInput(attrs={"placeholder": "alumno@email.cl"}),
+            "direccion": forms.TextInput(attrs={"placeholder": "Direccion del alumno"}),
             "telefono": forms.TextInput(
                 attrs={
                     "type": "tel",
@@ -249,5 +265,44 @@ class FichaAlumnoForm(forms.ModelForm):
             "observaciones": forms.Textarea(attrs={"rows": 3}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current_course = self.initial.get("curso") or getattr(self.instance, "curso", "")
+        if current_course and current_course not in dict(self.fields["curso"].choices):
+            self.fields["curso"].choices = list(self.fields["curso"].choices) + [
+                (current_course, current_course)
+            ]
+
     def clean_telefono(self):
         return normalize_chilean_whatsapp(self.cleaned_data.get("telefono"))
+
+
+class FichaMovimientoForm(forms.ModelForm):
+    concepto = forms.ChoiceField(
+        choices=FICHA_COURSE_CHOICES + [("Abono", "Abono"), ("Otro", "Otro")],
+        label="Concepto",
+    )
+
+    class Meta:
+        model = FichaMovimiento
+        fields = ["fecha", "concepto", "monto", "forma_pago", "observaciones"]
+        widgets = {
+            "fecha": forms.DateInput(attrs={"type": "date"}),
+            "monto": forms.NumberInput(attrs={"min": 0, "placeholder": "0"}),
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current_concept = self.initial.get("concepto") or getattr(self.instance, "concepto", "")
+        if current_concept and current_concept not in dict(self.fields["concepto"].choices):
+            self.fields["concepto"].choices = list(self.fields["concepto"].choices) + [
+                (current_concept, current_concept)
+            ]
+
+    def save(self, commit=True):
+        movimiento = super().save(commit=False)
+        movimiento.tipo = FichaMovimiento.tipo_desde_concepto(movimiento.concepto)
+        if commit:
+            movimiento.save()
+        return movimiento

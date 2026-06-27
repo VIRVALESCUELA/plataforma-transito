@@ -1,0 +1,445 @@
+{% extends "core/base.html" %}
+{% load balance_extras %}
+{% block title %}Balance mensual{% endblock %}
+
+{% block content %}
+<style>
+    .balance-toolbar {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .balance-tabs {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    .balance-tabs a {
+        border: 1px solid #cfd8dc;
+        border-radius: 999px;
+        color: #1f4b42;
+        font-weight: 800;
+        padding: 0.45rem 0.8rem;
+        text-decoration: none;
+        background: #fff;
+    }
+    .balance-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(160px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    .balance-kpi {
+        border: 1px solid #d7e3df;
+        border-radius: 8px;
+        padding: 0.8rem;
+        background: #f8fbfa;
+    }
+    .balance-kpi span {
+        display: block;
+        color: #546e7a;
+        font-size: 0.82rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .balance-kpi strong {
+        display: block;
+        margin-top: 0.25rem;
+        color: #173c35;
+        font-size: 1.25rem;
+    }
+    .balance-table-wrap {
+        max-height: 72vh;
+        overflow: auto;
+        border: 1px solid #d7e3df;
+        border-radius: 8px;
+        background: #fff;
+    }
+    .balance-table {
+        width: 100%;
+        min-width: 1680px;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    .balance-summary-table {
+        min-width: 720px;
+    }
+    .balance-table th,
+    .balance-table td {
+        border-bottom: 1px solid #dfe8e5;
+        border-right: 1px solid #eef3f1;
+        padding: 0.5rem 0.55rem;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .balance-table th:first-child,
+    .balance-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        min-width: 260px;
+        text-align: left;
+        background: #f4f8f6;
+        font-weight: 800;
+    }
+    .balance-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #eaf2ef;
+        color: #173c35;
+    }
+    .balance-table thead th:first-child {
+        z-index: 3;
+    }
+    .balance-summary-table th:first-child,
+    .balance-summary-table td:first-child {
+        min-width: 150px;
+    }
+    .balance-table tfoot td {
+        background: #f4f8f6;
+        font-weight: 900;
+    }
+    .balance-input {
+        width: 132px;
+        min-height: 34px;
+        box-sizing: border-box;
+        text-align: right;
+        font-weight: 700;
+    }
+    .balance-concept-input {
+        width: 230px;
+        max-width: 100%;
+        min-height: 34px;
+        box-sizing: border-box;
+        font-weight: 800;
+    }
+    .balance-concept-input:disabled {
+        border-color: transparent;
+        background: transparent;
+        color: #173c35;
+        opacity: 1;
+        padding-left: 0;
+        cursor: default;
+    }
+    .balance-concept-cell {
+        display: grid;
+        gap: 0.35rem;
+    }
+    .balance-delete-label {
+        display: none;
+        align-items: center;
+        gap: 0.35rem;
+        color: #b71c1c;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+    .balance-delete-label input {
+        width: auto;
+        min-height: auto;
+    }
+    .balance-delete-mode .balance-delete-label {
+        display: inline-flex;
+    }
+    .balance-positive {
+        color: #1b7f43;
+        font-weight: 900;
+    }
+    .balance-negative {
+        color: #c62828;
+        font-weight: 900;
+    }
+    .balance-muted {
+        color: #607d8b;
+    }
+    .balance-section {
+        scroll-margin-top: 90px;
+        margin-top: 1.35rem;
+    }
+    @media (max-width: 760px) {
+        .balance-summary {
+            grid-template-columns: repeat(2, minmax(130px, 1fr));
+        }
+    }
+    @media (max-width: 520px) {
+        .balance-summary {
+            grid-template-columns: 1fr;
+        }
+        .balance-toolbar {
+            align-items: stretch;
+        }
+    }
+</style>
+
+<a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver a gestion interna</a>
+
+<section class="card">
+    <div class="balance-toolbar">
+        <div>
+            <h1 style="margin:0;">Balance mensual</h1>
+            <p style="max-width: 760px; margin-bottom:0;">
+                Control simple de ingresos por fichas, productos vendidos y gastos mensuales.
+            </p>
+        </div>
+        <form method="get" style="display:flex; gap:0.5rem; align-items:end; flex-wrap:wrap;">
+            <label style="font-weight:800; display:grid; gap:0.3rem;">
+                Año
+                <select name="anio">
+                    {% for option in year_options %}
+                        <option value="{{ option }}" {% if option == year %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="btn btn-outline" type="submit">Ver</button>
+        </form>
+    </div>
+
+    <div class="balance-summary">
+        <div class="balance-kpi">
+            <span>Ingresos</span>
+            <strong>{{ total_income|clp }}</strong>
+        </div>
+        <div class="balance-kpi">
+            <span>Gastos</span>
+            <strong>{{ total_expenses|clp }}</strong>
+        </div>
+        <div class="balance-kpi">
+            <span>Resultado</span>
+            <strong class="{% if total_result < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                {{ total_result|signed_clp }}
+            </strong>
+        </div>
+        <div class="balance-kpi">
+            <span>Productos</span>
+            <strong>{{ total_products }}</strong>
+        </div>
+    </div>
+
+    <nav class="balance-tabs" aria-label="Secciones del balance">
+        <a href="#resumen">Resumen</a>
+        <a href="#ingresos">Ingresos</a>
+        <a href="#productos">Productos</a>
+        <a href="#gastos">Gastos</a>
+    </nav>
+</section>
+
+<section class="card balance-section" id="resumen">
+    <h2 style="margin-top:0;">Resumen ingresos vs gastos {{ year }}</h2>
+    <div class="balance-table-wrap">
+        <table class="balance-table balance-summary-table">
+            <thead>
+                <tr>
+                    <th>Mes</th>
+                    <th>Productos</th>
+                    <th>Ingresos</th>
+                    <th>Gastos</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for month in balance_months %}
+                    <tr>
+                        <td>{{ month.nombre }}</td>
+                        <td>{{ month.productos }}</td>
+                        <td>{{ month.ingresos|clp }}</td>
+                        <td>{{ month.gastos|clp }}</td>
+                        <td class="{% if month.resultado < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                            {{ month.resultado|signed_clp }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card balance-section" id="ingresos">
+    <h2 style="margin-top:0;">Ingresos por producto {{ year }}</h2>
+    <div class="balance-table-wrap">
+        <table class="balance-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    {% for _, month_name in months %}
+                        <th>{{ month_name }}</th>
+                    {% endfor %}
+                    <th>Total</th>
+                    <th>Precio prom.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in product_rows %}
+                    <tr>
+                        <td>{{ row.nombre }}</td>
+                        {% for month_number, month_name in months %}
+                            {% for key, value in row.meses.items %}
+                                {% if key == month_number %}
+                                    <td>{{ value.total|clp }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        <td><strong>{{ row.ingreso_total|clp }}</strong></td>
+                        <td>{{ row.precio_promedio|clp }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card balance-section" id="productos">
+    <h2 style="margin-top:0;">Cantidad de productos vendidos {{ year }}</h2>
+    <div class="balance-table-wrap">
+        <table class="balance-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    {% for _, month_name in months %}
+                        <th>{{ month_name }}</th>
+                    {% endfor %}
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in product_rows %}
+                    <tr>
+                        <td>{{ row.nombre }}</td>
+                        {% for month_number, month_name in months %}
+                            {% for key, value in row.meses.items %}
+                                {% if key == month_number %}
+                                    <td>{{ value.cantidad }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        <td><strong>{{ row.cantidad_total }}</strong></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card balance-section" id="gastos">
+    <h2 style="margin-top:0;">Gastos {{ year }}</h2>
+    <form method="post" style="display:flex; gap:0.6rem; align-items:end; flex-wrap:wrap; margin-bottom:1rem;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_varios">
+        <label style="display:grid; gap:0.3rem; font-weight:800;">
+            Agregar gasto puntual
+            <input name="varios_detalle" type="text" maxlength="60" placeholder="Ej: Patente comercial">
+        </label>
+        <button class="btn btn-outline" type="submit">Agregar concepto</button>
+        <button class="btn btn-outline" type="button" id="toggle-edit-concepts">Editar conceptos</button>
+        <button class="btn btn-outline" type="button" id="toggle-delete-concepts">Eliminar concepto</button>
+    </form>
+    <form method="post" id="expense-grid-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_gastos">
+        <div class="balance-table-wrap">
+            <table class="balance-table">
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        {% for _, month_name in months %}
+                            <th>{{ month_name }}</th>
+                        {% endfor %}
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in manual_expense_rows %}
+                        <tr>
+                            <td>
+                                <div class="balance-concept-cell">
+                                    <input
+                                        class="balance-concept-input"
+                                        type="text"
+                                        name="concepto_nombre_{{ row.concepto.id }}"
+                                        value="{{ row.concepto.nombre }}"
+                                        aria-label="Nombre del concepto {{ row.concepto.nombre }}"
+                                        disabled
+                                    >
+                                    <label class="balance-delete-label">
+                                        <input
+                                            type="checkbox"
+                                            name="delete_concepto_{{ row.concepto.id }}"
+                                            value="1"
+                                        >
+                                        Eliminar concepto
+                                    </label>
+                                </div>
+                            </td>
+                            {% for item in row.meses %}
+                                <td>
+                                    <input
+                                        class="balance-input"
+                                        type="text"
+                                        inputmode="numeric"
+                                        name="gasto_{{ row.concepto.id }}_{{ item.numero }}"
+                                        value="{% if item.monto %}{{ item.monto|floatformat:0 }}{% endif %}"
+                                        aria-label="{{ row.concepto.nombre }} mes {{ item.numero }}"
+                                    >
+                                </td>
+                            {% endfor %}
+                            <td><strong>{{ row.total|clp }}</strong></td>
+                        </tr>
+                    {% endfor %}
+                    {% for row in automatic_expense_rows %}
+                        <tr>
+                            <td>{{ row.nombre }} <span class="balance-muted">(automatico)</span></td>
+                            {% for item in row.meses %}
+                                <td>{{ item.monto|clp }}</td>
+                            {% endfor %}
+                            <td><strong>{{ row.total|clp }}</strong></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button class="btn" type="submit">Guardar gastos</button>
+            <a class="btn btn-outline" href="{% url 'balance:dashboard' %}?anio={{ year }}">Descartar cambios</a>
+        </div>
+    </form>
+</section>
+<script>
+    (function () {
+        const editButton = document.getElementById("toggle-edit-concepts");
+        const toggleButton = document.getElementById("toggle-delete-concepts");
+        const expenseForm = document.getElementById("expense-grid-form");
+        const conceptInputs = document.querySelectorAll(".balance-concept-input");
+        if (!editButton || !toggleButton || !expenseForm) {
+            return;
+        }
+
+        function setConceptEditMode(isEnabled) {
+            conceptInputs.forEach(function (input) {
+                input.disabled = !isEnabled;
+            });
+            editButton.textContent = isEnabled ? "Bloquear conceptos" : "Editar conceptos";
+        }
+
+        function setDeleteMode(isEnabled) {
+            expenseForm.classList.toggle("balance-delete-mode", isEnabled);
+            toggleButton.textContent = isEnabled ? "Ocultar eliminacion" : "Eliminar concepto";
+            setConceptEditMode(isEnabled);
+        }
+
+        editButton.addEventListener("click", function () {
+            const isCurrentlyLocked = conceptInputs.length ? conceptInputs[0].disabled : true;
+            if (!isCurrentlyLocked) {
+                setDeleteMode(false);
+                return;
+            }
+            setConceptEditMode(true);
+        });
+
+        toggleButton.addEventListener("click", function () {
+            setDeleteMode(!expenseForm.classList.contains("balance-delete-mode"));
+        });
+    }());
+</script>
+{% endblock %}

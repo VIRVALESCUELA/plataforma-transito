@@ -4,6 +4,179 @@
 {% block extra_head %}
     {{ block.super }}
     <style>
+        .student-dashboard {
+            display: grid;
+            gap: 1.25rem;
+        }
+        .student-hero {
+            overflow: hidden;
+            position: relative;
+            border-radius: 8px;
+            padding: 1.5rem;
+            background:
+                linear-gradient(135deg, rgba(31, 75, 66, 0.96), rgba(23, 33, 47, 0.96)),
+                linear-gradient(90deg, rgba(244, 198, 75, 0.22), rgba(30, 136, 229, 0.16));
+            color: #fff;
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+        }
+        .student-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-top: 4px solid var(--brand-amber);
+            pointer-events: none;
+        }
+        .student-hero-content {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 1.1rem;
+        }
+        .student-hero h1 {
+            margin: 0;
+            color: #fff;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            line-height: 1.05;
+            letter-spacing: 0;
+        }
+        .student-hero p {
+            margin: 0;
+            max-width: 720px;
+            color: #d8eee8;
+            line-height: 1.55;
+        }
+        .student-metrics {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(130px, 1fr));
+            gap: 0.75rem;
+        }
+        .student-metric {
+            min-width: 0;
+            padding: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .student-metric span {
+            display: block;
+            color: #cfe6df;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .student-metric strong {
+            display: block;
+            margin-top: 0.28rem;
+            color: #fff;
+            font-size: 1.2rem;
+            line-height: 1.15;
+        }
+        .dashboard-panel {
+            border-radius: 8px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+        }
+        .dashboard-panel h2,
+        .dashboard-panel h3 {
+            letter-spacing: 0;
+        }
+        .dashboard-section {
+            margin-bottom: 0;
+        }
+        .dashboard-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .dashboard-section-title h2 {
+            margin: 0;
+            color: #17212f;
+            font-size: 1.25rem;
+        }
+        .dashboard-note {
+            margin: 0;
+            color: #607d8b;
+            line-height: 1.5;
+        }
+        .dashboard-table-wrap {
+            overflow-x: auto;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+        }
+        .dashboard-table-wrap table {
+            margin: 0;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .dashboard-table-wrap th {
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.76rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .dashboard-table-wrap td {
+            background: #fff;
+            vertical-align: middle;
+        }
+        .access-status-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+        }
+        .access-status-card::before {
+            width: 5px;
+        }
+        .access-status-card h2,
+        .access-status-card p,
+        .access-status-card .section-heading h2 {
+            color: var(--brand-text);
+        }
+        .access-status-card .summary-card {
+            background: #f8fafc;
+            border-color: rgba(15, 23, 42, 0.08);
+        }
+        .summary-card {
+            border-radius: 8px;
+            border-color: rgba(15, 23, 42, 0.08);
+        }
+        .highlight-card {
+            border-radius: 8px;
+            background: #f7fbff;
+            border: 1px solid rgba(30, 136, 229, 0.16);
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+        }
+        .exam-template-card {
+            border-radius: 8px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+        }
+        .exam-template-card h3,
+        .exam-template-stat strong {
+            color: #17212f;
+        }
+        .exam-template-tag,
+        .exam-template-stat span {
+            color: #607d8b;
+        }
+        .exam-template-stat {
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: none;
+        }
+        .exam-template-card::before {
+            width: 5px;
+        }
+        .exam-template-actions .btn,
+        .exam-template-actions select {
+            border-radius: 8px;
+        }
         .topic-material-link {
             display: inline-flex;
             align-items: center;
@@ -18,39 +191,63 @@
             color: #0d47a1;
             border-bottom-color: currentColor;
         }
+        @media (max-width: 900px) {
+            .student-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 640px) {
+            .student-hero {
+                padding: 1.15rem;
+            }
+            .student-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 {% endblock %}
 
 {% block content %}
-<article class="card" style="margin-bottom: 2rem; background: #1f4b42; color: #fff; border: none;">
-    <h1 style="color:#fff;">Panel del alumno</h1>
-    <p style="max-width: 680px; color: #f4efe3; margin-bottom: 0;">
-        Hola {{ student.first_name|default:student.username }}, desde aqui puedes rendir tus examenes, reanudar intentos y revisar tu historial personal.
-        {% if profile %}
-            Tu rol actual es <strong>{{ profile.get_role_display }}</strong>.
-        {% endif %}
-    </p>
-    <div class="meta" style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
-        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(227,242,253,0.9); color: #0d47a1;">
-            Promedio de puntaje: {% if average_score is not None %}{{ average_score|floatformat:1 }}%{% else %}&mdash;{% endif %}
-        </span>
-        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(237,231,246,0.9); color: #4527a0;">
-            Intentos realizados: {{ total_attempts }}
-        </span>
-        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(232,245,233,0.9); color: #1b5e20;">
-            Aprobados (&gt;= 85%): {{ approved_attempts }}
-        </span>
-        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(255,235,238,0.9); color: #c62828;">
-            Reprobados (&lt; 85%): {{ failed_attempts }}
-        </span>
-        <span class="pill" style="font-size: 0.95rem; padding: 0.4rem 0.9rem; background: rgba(224,247,250,0.9); color: #006064;">
-            Horas en plataforma: {{ platform_hours_sum }}
-        </span>
+<div class="student-dashboard">
+<article class="student-hero">
+    <div class="student-hero-content">
+        <div>
+            <span class="pill" style="width: fit-content; background: rgba(227,242,253,0.95); color: #0d47a1;">Panel del alumno</span>
+            <h1 style="margin-top: 0.75rem;">Hola {{ student.first_name|default:student.username }}</h1>
+            <p>
+               Debes alcanzar un promedio mínimo del 85% y completar al menos 50 exámenes aprobados.
+                {% if profile %}
+                    Tu rol actual es <strong>{{ profile.get_role_display }}</strong>.
+                {% endif %}
+            </p>
+        </div>
+        <div class="student-metrics" aria-label="Resumen del alumno">
+            <div class="student-metric">
+                <span>Promedio</span>
+                <strong>{% if average_score is not None %}{{ average_score|floatformat:1 }}%{% else %}&mdash;{% endif %}</strong>
+            </div>
+            <div class="student-metric">
+                <span>Intentos</span>
+                <strong>{{ total_attempts }}</strong>
+            </div>
+            <div class="student-metric">
+                <span>Aprobados</span>
+                <strong>{{ approved_attempts }}</strong>
+            </div>
+            <div class="student-metric">
+                <span>Reprobados</span>
+                <strong>{{ failed_attempts }}</strong>
+            </div>
+            <div class="student-metric">
+                <span>Horas</span>
+                <strong>{{ platform_hours_sum }}</strong>
+            </div>
+        </div>
     </div>
 </article>
 
 <section class="dashboard-section">
-    <article class="card {% if has_exam_access %}access-status-card{% endif %}">
+    <article class="card dashboard-panel {% if has_exam_access %}access-status-card{% endif %}">
         <h2 style="margin-top: 0;">Estado de acceso</h2>
         {% if has_exam_access %}
             <p>
@@ -169,18 +366,19 @@
 
 {% if has_exam_access and exam_progress %}
 <section class="dashboard-section">
-    <h2 style="margin-bottom: 1rem;">
+    <div class="dashboard-section-title">
+        <h2>Avance por tema</h2>
         {% if exam_progress.ready_for_municipal %}
-            <span class="status-pill completed" style="font-size: 1rem; padding: 0.45rem 0.9rem;">Listo para examen municipal</span>
+            <span class="status-pill completed">Listo para examen municipal</span>
         {% elif exam_progress.attempt_count == 0 %}
-            <span class="status-pill in-progress" style="font-size: 1rem; padding: 0.45rem 0.9rem;">Comienza con tu primer examen</span>
+            <span class="status-pill in-progress">Comienza con tu primer examen</span>
         {% else %}
-            <span class="status-pill in-progress" style="font-size: 1rem; padding: 0.45rem 0.9rem;">En entrenamiento</span>
+            <span class="status-pill in-progress">En entrenamiento</span>
         {% endif %}
-    </h2>
-    <article class="card">
+    </div>
+    <article class="card dashboard-panel">
         {% if exam_progress.topics %}
-            <div style="overflow-x: auto;">
+            <div class="dashboard-table-wrap">
                 <table>
                     <thead>
                         <tr>
@@ -221,7 +419,7 @@
         {% endif %}
 
         {% if exam_progress.weak_topics %}
-            <p style="margin: 1rem 0 0; color: #8a6d3b;">
+            <p class="dashboard-note" style="margin-top: 1rem; color: #8a6d3b;">
                 Refuerza primero los temas bajo 85%; los nuevos examenes mezclaran preguntas no vistas con preguntas falladas.
             </p>
         {% endif %}
@@ -231,9 +429,9 @@
 
 {% if has_exam_access %}
 <section class="dashboard-section">
-    <div class="section-heading">
-        <span class="section-kicker">Plantillas disponibles</span>
-       
+    <div class="dashboard-section-title">
+        <h2>Plantillas disponibles</h2>
+        <span class="section-kicker">Evaluacion teorica</span>
     </div>
     {% if templates %}
         <div class="exam-template-list">
@@ -297,11 +495,12 @@
 </section>
 
 <section class="dashboard-section">
-    <h2 style="margin-bottom: 1rem;">
-        <span class="pill" style="font-size: 1rem; padding: 0.45rem 0.9rem; background: #fff3cd; color: #8a6d3b;">Historial de intentos</span>
-    </h2>
+    <div class="dashboard-section-title">
+        <h2>Historial de intentos</h2>
+        <span class="pill" style="background: #fff3cd; color: #8a6d3b;">Registro personal</span>
+    </div>
     {% if history_attempts %}
-        <div style="overflow-x: auto;">
+        <div class="dashboard-table-wrap">
             <table>
                 <thead>
                     <tr>
@@ -364,4 +563,5 @@
     {% endif %}
 </section>
 {% endif %}
+</div>
 {% endblock %}

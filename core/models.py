@@ -56,6 +56,7 @@ class Inscripcion(models.Model):
 
     nombre = models.CharField(max_length=150)
     comuna = models.CharField(max_length=120)
+    direccion = models.CharField(max_length=180, blank=True)
     correo = models.EmailField()
     telefono = models.CharField(max_length=30)
     curso = models.CharField(max_length=120, blank=True)
@@ -118,6 +119,7 @@ class FichaAlumno(models.Model):
     nombre = models.CharField(max_length=150)
     correo = models.EmailField(blank=True)
     telefono = models.CharField(max_length=30, blank=True)
+    direccion = models.CharField(max_length=180, blank=True)
     curso = models.CharField(max_length=120, blank=True)
     rut = models.CharField(max_length=20, blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
@@ -166,6 +168,86 @@ class FichaAlumno(models.Model):
             self.numero_ficha = self.next_numero_ficha()
         self.edad = self.calcular_edad()
         super().save(*args, **kwargs)
+
+    @property
+    def total_pagado(self):
+        movimientos_total = self.movimientos.aggregate(total=models.Sum("monto"))["total"]
+        if movimientos_total is not None:
+            return movimientos_total
+        return self.valor_pagado
+
+
+class FichaMovimiento(models.Model):
+    class Tipo(models.TextChoices):
+        CURSO = "CURSO", "Curso"
+        CLASE_EXTRA = "CLASE_EXTRA", "Clase extra"
+        ENSAYO_SICOTECNICO = "ENSAYO_SICOTECNICO", "Ensayo sicotecnico"
+        SIMULADOR = "SIMULADOR", "Simulador"
+        LIBRO = "LIBRO", "Libro"
+        ABONO = "ABONO", "Abono"
+        OTRO = "OTRO", "Otro"
+
+    ficha = models.ForeignKey(
+        FichaAlumno,
+        on_delete=models.CASCADE,
+        related_name="movimientos",
+    )
+    fecha = models.DateField(default=timezone.localdate)
+    tipo = models.CharField(max_length=24, choices=Tipo.choices, default=Tipo.CURSO)
+    concepto = models.CharField(max_length=120)
+    monto = models.PositiveIntegerField(default=0)
+    es_inicial = models.BooleanField(default=False)
+    forma_pago = models.CharField(
+        max_length=20,
+        choices=FichaAlumno.FormaPago.choices,
+        blank=True,
+    )
+    observaciones = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-fecha", "-id"]
+        verbose_name = "Movimiento de ficha"
+        verbose_name_plural = "Movimientos de fichas"
+
+    def __str__(self):
+        return f"{self.ficha.numero_ficha} - {self.concepto} - {self.monto}"
+
+    @classmethod
+    def tipo_desde_concepto(cls, concepto):
+        normalized = (concepto or "").casefold()
+        if "extra" in normalized:
+            return cls.Tipo.CLASE_EXTRA
+        if "sico" in normalized or "psico" in normalized or "ensayo" in normalized:
+            return cls.Tipo.ENSAYO_SICOTECNICO
+        if "simulador" in normalized:
+            return cls.Tipo.SIMULADOR
+        if "libro" in normalized:
+            return cls.Tipo.LIBRO
+        if "abono" in normalized:
+            return cls.Tipo.ABONO
+        if normalized:
+            return cls.Tipo.CURSO
+        return cls.Tipo.OTRO
+
+    @classmethod
+    def sync_pago_inicial(cls, ficha):
+        concepto = ficha.curso or "Pago inicial"
+        defaults = {
+            "fecha": ficha.fecha_inscripcion,
+            "tipo": cls.tipo_desde_concepto(concepto),
+            "concepto": concepto,
+            "monto": ficha.valor_pagado,
+            "es_inicial": True,
+            "forma_pago": ficha.forma_pago,
+            "observaciones": "Movimiento inicial generado desde la ficha.",
+        }
+        cls.objects.update_or_create(
+            ficha=ficha,
+            es_inicial=True,
+            defaults=defaults,
+        )
 
 
 class PageVisitCounter(models.Model):
