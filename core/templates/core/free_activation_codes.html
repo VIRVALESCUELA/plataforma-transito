@@ -2,6 +2,80 @@
 {% block title %}Codigos libres{% endblock %}
 
 {% block content %}
+<style>
+    .free-codes-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .free-codes-actions form {
+        margin: 0;
+    }
+    @media (max-width: 680px) {
+        .free-codes-table-wrap {
+            max-height: none;
+            overflow: visible;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .free-codes-table,
+        .free-codes-table thead,
+        .free-codes-table tbody,
+        .free-codes-table tr,
+        .free-codes-table th,
+        .free-codes-table td {
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+        }
+        .free-codes-table {
+            background: transparent;
+            box-shadow: none;
+        }
+        .free-codes-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+        .free-codes-table tr {
+            margin-bottom: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .free-codes-table td {
+            display: grid;
+            grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+            gap: 0.75rem;
+            align-items: start;
+            padding: 0.85rem;
+            overflow-wrap: anywhere;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .free-codes-table td:last-child {
+            border-bottom: 0;
+        }
+        .free-codes-table td::before {
+            content: attr(data-label);
+            color: #607d8b;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .free-codes-actions,
+        .free-codes-actions form,
+        .free-codes-actions button {
+            box-sizing: border-box;
+            width: 100%;
+        }
+    }
+</style>
+
 <a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver a gestion interna</a>
 
 <section class="card">
@@ -28,6 +102,7 @@
         <h2 style="margin-top: 0;">Generar lote</h2>
         <form method="post" style="display:grid; gap:1rem; max-width:720px;">
             {% csrf_token %}
+            <input type="hidden" name="action" value="generate">
             <div style="display:grid; gap:1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
                 <label>
                     Cantidad
@@ -54,6 +129,73 @@
                 <button class="btn" type="submit">Crear codigos libres</button>
             </div>
         </form>
+    </article>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1.5rem;">
+    <article class="card">
+        <h2 style="margin-top: 0;">Codigos libres creados</h2>
+        {% if free_codes %}
+            <div class="sticky-table-wrap free-codes-table-wrap">
+                <table class="sticky-header-table free-codes-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Curso</th>
+                            <th>Dias</th>
+                            <th>Correo asociado</th>
+                            <th>Uso</th>
+                            <th>Creado</th>
+                            <th>Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activation in free_codes %}
+                            <tr>
+                                <td data-label="Codigo"><strong>{{ activation.code }}</strong></td>
+                                <td data-label="Curso">{{ activation.course_name|default:"General" }}</td>
+                                <td data-label="Dias">{{ activation.duration_days }}</td>
+                                <td data-label="Correo">
+                                    {{ activation.sent_to_email|default:"Sin correo asociado" }}
+                                </td>
+                                <td data-label="Uso">
+                                    {% if activation.used_by %}
+                                        <span class="status-pill completed">Usado</span><br>
+                                        <span class="meta" style="color:#455a64;">
+                                            {{ activation.used_by.email|default:activation.used_by.username }}
+                                            {% if activation.used_at %}<br>{{ activation.used_at|date:"d/m/Y H:i" }}{% endif %}
+                                        </span>
+                                    {% elif activation.is_enabled %}
+                                        <span class="status-pill in-progress">Disponible</span>
+                                    {% else %}
+                                        <span class="status-pill expired">Deshabilitado</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Creado">{{ activation.created_at|date:"d/m/Y H:i" }}</td>
+                                <td data-label="Accion">
+                                    <div class="free-codes-actions">
+                                        {% if activation.used_by %}
+                                            <span class="meta" style="color:#455a64;">No eliminable</span>
+                                        {% else %}
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="delete_code">
+                                                <input type="hidden" name="activation_id" value="{{ activation.id }}">
+                                                <button class="btn btn-danger" type="submit" onclick="return confirm('Se eliminara este codigo libre. ¿Deseas continuar?');">
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No hay codigos libres creados todavia.</p>
+        {% endif %}
     </article>
 </section>
 

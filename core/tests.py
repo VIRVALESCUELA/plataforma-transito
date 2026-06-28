@@ -766,10 +766,55 @@ class FreeActivationCodeAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         code = ActivationCode.objects.get(code__startswith="EXT-")
         self.assertEqual(code.used_by, None)
+        self.assertEqual(code.sent_to_email, "otraescuela@example.com")
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["otraescuela@example.com"])
         self.assertIn(code.code, mail.outbox[0].body)
         self.assertContains(response, "Lote enviado a otraescuela@example.com")
+        self.assertContains(response, "Codigos libres creados")
+        self.assertContains(response, "otraescuela@example.com")
+
+    def test_staff_can_delete_unused_free_activation_code(self):
+        code = ActivationCode.objects.create(
+            code="BORRAR-123",
+            course_name="Clase B",
+            sent_to_email="externo@example.com",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("core_web:free-activation-codes"),
+            {
+                "action": "delete_code",
+                "activation_id": code.id,
+            },
+        )
+
+        self.assertRedirects(response, reverse("core_web:free-activation-codes"))
+        self.assertFalse(ActivationCode.objects.filter(pk=code.pk).exists())
+
+    def test_staff_cannot_delete_used_free_activation_code(self):
+        code = ActivationCode.objects.create(
+            code="USADO-123",
+            course_name="Clase B",
+            sent_to_email="externo@example.com",
+            used_by=self.student,
+            used_at=timezone.now(),
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("core_web:free-activation-codes"),
+            {
+                "action": "delete_code",
+                "activation_id": code.id,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(ActivationCode.objects.filter(pk=code.pk).exists())
+        self.assertContains(response, "No se puede eliminar un codigo que ya fue usado.")
 
     def test_non_staff_cannot_generate_free_activation_codes(self):
         self.client.force_login(self.student)

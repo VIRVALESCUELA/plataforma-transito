@@ -297,9 +297,12 @@
             }
             .attempt-actions {
                 flex-direction: column;
+                min-width: 0;
             }
             .attempt-actions .btn,
-            .attempt-actions form {
+            .attempt-actions form,
+            .attempt-actions button {
+                box-sizing: border-box;
                 width: 100%;
             }
         }

@@ -534,6 +534,8 @@ footer { padding: 1.5rem; text-align: center; font-size: 0.85rem; color: #78909c
     .page-back-link.btn,
     .btn,
     .btn-outline {
+        box-sizing: border-box;
+        max-width: 100%;
         width: 100%;
     }
     .question {

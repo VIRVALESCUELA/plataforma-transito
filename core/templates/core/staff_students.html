@@ -2,6 +2,76 @@
 {% block title %}Gestion de alumnos{% endblock %}
 
 {% block content %}
+<style>
+    .student-audit-table-wrap {
+        overflow-x: auto;
+    }
+    .student-audit-action {
+        display: flex;
+        justify-content: flex-start;
+    }
+    @media (max-width: 680px) {
+        .student-audit-table-wrap {
+            overflow: visible;
+        }
+        .student-audit-table,
+        .student-audit-table thead,
+        .student-audit-table tbody,
+        .student-audit-table tr,
+        .student-audit-table th,
+        .student-audit-table td {
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+        }
+        .student-audit-table {
+            background: transparent;
+            box-shadow: none;
+        }
+        .student-audit-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+        .student-audit-table tr {
+            margin-bottom: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .student-audit-table td {
+            display: grid;
+            grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+            gap: 0.75rem;
+            align-items: start;
+            padding: 0.85rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .student-audit-table td:last-child {
+            border-bottom: 0;
+        }
+        .student-audit-table td::before {
+            content: attr(data-label);
+            color: #607d8b;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .student-audit-action {
+            min-width: 0;
+        }
+        .student-audit-action .btn {
+            box-sizing: border-box;
+            width: 100%;
+        }
+    }
+</style>
+
 <a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver a gestion interna</a>
 
 <section class="card">
@@ -26,8 +96,8 @@
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
     {% if students %}
-        <div style="overflow-x: auto;">
-            <table>
+        <div class="student-audit-table-wrap">
+            <table class="student-audit-table">
                 <thead>
                     <tr>
                         <th>Alumno</th>
@@ -41,12 +111,12 @@
                 <tbody>
                     {% for profile in students %}
                         <tr>
-                            <td>
+                            <td data-label="Alumno">
                                 <strong>{{ profile.user.get_full_name|default:profile.user.username }}</strong><br>
                                 <span class="meta" style="color:#455a64;">{{ profile.user.email|default:"Sin correo" }}</span>
                             </td>
-                            <td>{{ profile.activated_course_name|default:"Sin curso activo" }}</td>
-                            <td>
+                            <td data-label="Curso">{{ profile.activated_course_name|default:"Sin curso activo" }}</td>
+                            <td data-label="Acceso">
                                 {% if profile.has_active_exam_access %}
                                     <span class="status-pill completed">Activo</span>
                                 {% elif profile.access_expires_at %}
@@ -58,19 +128,21 @@
                                     <br><span class="meta" style="color:#455a64;">Vence {{ profile.access_expires_at|date:"d/m/Y" }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Examenes">
                                 {{ profile.attempt_count }} total<br>
                                 <span class="meta" style="color:#455a64;">{{ profile.delivered_count }} entregados</span>
                             </td>
-                            <td>
+                            <td data-label="Promedio">
                                 {% if profile.average_score is not None %}
                                     {{ profile.average_score|floatformat:1 }}%
                                 {% else %}
                                     &mdash;
                                 {% endif %}
                             </td>
-                            <td>
-                                <a class="btn" href="{% url 'core_web:staff-student-audit' profile.user.pk %}">Auditar</a>
+                            <td data-label="Accion">
+                                <div class="student-audit-action">
+                                    <a class="btn" href="{% url 'core_web:staff-student-audit' profile.user.pk %}">Auditar</a>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

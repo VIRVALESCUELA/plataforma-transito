@@ -439,11 +439,17 @@ class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["available_codes_count"] = ActivationCode.objects.filter(
+        free_codes = (
+            ActivationCode.objects.filter(inscripcion__isnull=True)
+            .select_related("used_by")
+            .order_by("-created_at")
+        )
+        context["available_codes_count"] = free_codes.filter(
             is_enabled=True,
             used_by__isnull=True,
             course_name="Clase B",
         ).count()
+        context["free_codes"] = free_codes[:200]
         context["generated_codes"] = kwargs.get("generated_codes", [])
         context["form_values"] = kwargs.get(
             "form_values",
@@ -482,6 +488,21 @@ class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView)
         )
 
     def post(self, request, *args, **kwargs):
+        action = request.POST.get("action", "generate")
+        if action == "delete_code":
+            activation = get_object_or_404(
+                ActivationCode,
+                pk=request.POST.get("activation_id"),
+                inscripcion__isnull=True,
+            )
+            if activation.used_by_id or activation.used_at:
+                messages.error(request, "No se puede eliminar un codigo que ya fue usado.")
+            else:
+                code = activation.code
+                activation.delete()
+                messages.success(request, f"Codigo {code} eliminado.")
+            return redirect("core_web:free-activation-codes")
+
         try:
             count = int(request.POST.get("count", 10))
             days = int(request.POST.get("days", 30))
@@ -521,6 +542,7 @@ class FreeActivationCodeView(PrivateAreaMixin, StaffRequiredMixin, TemplateView)
                     course_name=course_name,
                     duration_days=days,
                     is_enabled=True,
+                    sent_to_email=recipient_email,
                 )
                 generated_codes.append(activation)
 

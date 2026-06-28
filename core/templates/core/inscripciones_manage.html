@@ -2,6 +2,83 @@
 {% block title %}Inscripciones pendientes{% endblock %}
 
 {% block content %}
+<style>
+    .inscriptions-table-actions {
+        display: grid;
+        gap: 0.65rem;
+        justify-items: start;
+    }
+    .inscriptions-table-actions form {
+        margin: 0;
+    }
+    @media (max-width: 680px) {
+        .inscriptions-table-wrap {
+            max-height: none;
+            overflow: visible;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .inscriptions-table,
+        .inscriptions-table thead,
+        .inscriptions-table tbody,
+        .inscriptions-table tr,
+        .inscriptions-table th,
+        .inscriptions-table td {
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+        }
+        .inscriptions-table {
+            background: transparent;
+            box-shadow: none;
+        }
+        .inscriptions-table thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+        .inscriptions-table tr {
+            margin-bottom: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .inscriptions-table td {
+            display: grid;
+            grid-template-columns: minmax(92px, 32%) minmax(0, 1fr);
+            gap: 0.75rem;
+            align-items: start;
+            padding: 0.85rem;
+            overflow-wrap: anywhere;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .inscriptions-table td:last-child {
+            border-bottom: 0;
+        }
+        .inscriptions-table td::before {
+            content: attr(data-label);
+            color: #607d8b;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .inscriptions-table select,
+        .inscriptions-table-actions,
+        .inscriptions-table-actions .btn,
+        .inscriptions-table-actions form,
+        .inscriptions-table-actions button {
+            box-sizing: border-box;
+            min-width: 0 !important;
+            width: 100%;
+        }
+    }
+</style>
+
 <a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver a gestion interna</a>
 
 <section class="card">
@@ -27,8 +104,8 @@
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
     {% if inscripciones %}
-        <div class="sticky-table-wrap">
-            <table class="sticky-header-table">
+        <div class="sticky-table-wrap inscriptions-table-wrap">
+            <table class="sticky-header-table inscriptions-table">
                 <thead>
                     <tr>
                         <th>Fecha</th>
@@ -45,17 +122,17 @@
                 <tbody>
                     {% for inscripcion in inscripciones %}
                         <tr>
-                            <td>{{ inscripcion.created_at|date:"d/m/Y H:i" }}</td>
-                            <td>{{ inscripcion.nombre }}</td>
-                            <td>{{ inscripcion.curso|default:"Sin definir" }}</td>
-                            <td>
+                            <td data-label="Fecha">{{ inscripcion.created_at|date:"d/m/Y H:i" }}</td>
+                            <td data-label="Nombre">{{ inscripcion.nombre }}</td>
+                            <td data-label="Curso">{{ inscripcion.curso|default:"Sin definir" }}</td>
+                            <td data-label="Contacto">
                                 {{ inscripcion.correo }}<br>
                                 <span class="meta" style="color:#455a64;">{{ inscripcion.telefono }}</span>
                                 {% if inscripcion.direccion %}
                                     <br><span class="meta" style="color:#455a64;">{{ inscripcion.direccion }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Estado">
                                 <form method="post" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="update_status">
@@ -67,15 +144,17 @@
                                     </select>
                                 </form>
                             </td>
-                            <td>
+                            <td data-label="Ficha">
                                 {% if inscripcion.ficha_alumno %}
                                     <strong>{{ inscripcion.ficha_alumno.numero_ficha }}</strong><br>
                                     <span class="meta" style="color:#455a64;">{{ inscripcion.ficha_alumno.rut|default:"Sin rut" }}</span>
                                 {% else %}
-                                    <a class="btn btn-outline" href="{% url 'core_web:fichas' %}">Crear ficha</a>
+                                    <div class="inscriptions-table-actions">
+                                        <a class="btn btn-outline" href="{% url 'core_web:fichas' %}">Crear ficha</a>
+                                    </div>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Cuenta">
                                 {% if inscripcion.user %}
                                     <strong>{{ inscripcion.user.username }}</strong><br>
                                     <span class="meta" style="color:#455a64;">Enlazada</span>
@@ -85,7 +164,7 @@
                                     <span class="pill">No requiere plataforma</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Codigo">
                                 {% if inscripcion.activation_code %}
                                     <strong>{{ inscripcion.activation_code.code }}</strong><br>
                                     <span class="meta" style="color:#455a64;">{{ inscripcion.activation_code.course_name }}</span>
@@ -96,10 +175,11 @@
                                     &mdash;
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Acciones">
+                                <div class="inscriptions-table-actions">
                                 {% if inscripcion.activation_code %}
                                     <span class="pill">Codigo generado</span>
-                                    <form method="post" style="margin-top: 0.65rem;">
+                                    <form method="post">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="add_30_days">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.id }}">
@@ -113,6 +193,7 @@
                                         <button class="btn" type="submit">Generar codigo Clase B</button>
                                     </form>
                                 {% endif %}
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

@@ -232,9 +232,17 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(ActivationCode)
 class ActivationCodeAdmin(admin.ModelAdmin):
-    list_display = ("code", "course_name", "duration_days", "is_enabled", "used_by", "used_at")
+    list_display = (
+        "code",
+        "course_name",
+        "duration_days",
+        "sent_to_email",
+        "is_enabled",
+        "used_by",
+        "used_at",
+    )
     list_filter = ("is_enabled", "duration_days")
-    search_fields = ("code", "course_name", "used_by__username")
+    search_fields = ("code", "course_name", "sent_to_email", "used_by__username", "used_by__email")
 
 
 @admin.register(Inscripcion)
