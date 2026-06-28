@@ -107,6 +107,11 @@
                     <label class="ficha-field {% if field.name == 'observaciones' %}ficha-field-wide{% endif %}">
                         {{ field.label }}
                         {{ field }}
+                        {% if field.name == 'clases_contratadas' %}
+                            <span class="meta" style="color:#455a64;">
+                                Las clases extra se agregan abajo como movimiento "Clase extra".
+                            </span>
+                        {% endif %}
                         {{ field.errors }}
                     </label>
                 {% endfor %}
@@ -124,6 +129,10 @@
         {% if editing_ficha %}
             <div class="ficha-movement-panel">
                 <h3 style="margin:0;">Movimientos de la ficha</h3>
+                <p class="meta" style="color:#455a64; margin:0.35rem 0 0;">
+                    Cupo practico actual: {{ editing_ficha.cupo_clases_practicas }} clases
+                    ({{ editing_ficha.clases_contratadas }} contratadas + {{ editing_ficha.clases_extra_vendidas }} extra).
+                </p>
                 {% if editing_ficha.movimientos.all %}
                     <div class="sticky-table-wrap" style="margin-top:0.85rem;">
                         <table class="sticky-header-table">
@@ -237,6 +246,7 @@
                             <th>Alumno</th>
                             <th>Rut / edad</th>
                             <th>Curso</th>
+                            <th>Cupo practico</th>
                             <th>Pago</th>
                             <th>Origen</th>
                             <th>Accion</th>
@@ -260,6 +270,12 @@
                                     </span>
                                 </td>
                                 <td>{{ ficha.curso|default:"Sin curso" }}</td>
+                                <td>
+                                    {{ ficha.cupo_clases_practicas }} clases<br>
+                                    <span class="meta" style="color:#455a64;">
+                                        {{ ficha.clases_contratadas }} base + {{ ficha.clases_extra_vendidas }} extra
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="ficha-total">${{ ficha.total_movimientos|default_if_none:ficha.valor_pagado }}</span><br>
                                     <span class="meta" style="color:#455a64;">

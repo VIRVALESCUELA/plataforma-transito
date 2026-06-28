@@ -121,6 +121,11 @@ class FichaAlumno(models.Model):
     telefono = models.CharField(max_length=30, blank=True)
     direccion = models.CharField(max_length=180, blank=True)
     curso = models.CharField(max_length=120, blank=True)
+    clases_contratadas = models.PositiveSmallIntegerField(
+        default=0,
+        blank=True,
+        help_text="Cantidad de clases practicas incluidas en el curso vendido.",
+    )
     rut = models.CharField(max_length=20, blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
     edad = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -175,6 +180,14 @@ class FichaAlumno(models.Model):
         if movimientos_total is not None:
             return movimientos_total
         return self.valor_pagado
+
+    @property
+    def clases_extra_vendidas(self):
+        return self.movimientos.filter(tipo=FichaMovimiento.Tipo.CLASE_EXTRA).count()
+
+    @property
+    def cupo_clases_practicas(self):
+        return (self.clases_contratadas or 0) + self.clases_extra_vendidas
 
 
 class FichaMovimiento(models.Model):

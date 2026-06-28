@@ -315,7 +315,6 @@
                                         data-ficha="{% if cell.lesson %}{{ cell.lesson.ficha }}{% endif %}"
                                         data-ficha-alumno="{% if cell.lesson and cell.lesson.ficha_alumno_id %}{{ cell.lesson.ficha_alumno_id }}{% endif %}"
                                         data-lesson="{% if cell.lesson %}{{ cell.lesson.lesson_number }}{% endif %}"
-                                        data-course="{% if cell.lesson %}{{ cell.lesson.course_kind }}{% endif %}"
                                         data-status="{% if cell.lesson %}{{ cell.lesson.status }}{% endif %}"
                                         data-notes="{% if cell.lesson %}{{ cell.lesson.notes }}{% elif cell.block %}{{ cell.block.reason }}{% endif %}"
                                         data-blocked="{% if cell.block or cell.work_rule_blocked %}1{% else %}0{% endif %}"
@@ -373,14 +372,6 @@
         <label>
             Clase
             <input id="modal-lesson" type="number" min="1" name="lesson_number" placeholder="1">
-        </label>
-        <label>
-            Curso
-            <select id="modal-course" name="course_kind">
-                {% for value, label in course_choices %}
-                    <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-            </select>
         </label>
         <label>
             Estado
@@ -463,7 +454,6 @@
                 document.getElementById("modal-ficha-alumno").value = cell.dataset.fichaAlumno || "";
                 document.getElementById("modal-ficha").value = cell.dataset.ficha || "";
                 document.getElementById("modal-lesson").value = cell.dataset.lesson || "";
-                document.getElementById("modal-course").value = cell.dataset.course || "12_MODULOS";
                 document.getElementById("modal-status").value = cell.dataset.status || "SCHEDULED";
                 document.getElementById("modal-notes").value = cell.dataset.notes || "";
                 document.getElementById("modal-action").value = "save_lesson";

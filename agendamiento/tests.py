@@ -6,7 +6,7 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import FichaAlumno
+from core.models import FichaAlumno, FichaMovimiento
 
 from .models import DrivingLesson, LessonStatus, ScheduleBlock, ScheduleOpening, ScheduleResource
 
@@ -346,6 +346,7 @@ class ScheduleGridTests(TestCase):
             numero_ficha=5177,
             nombre="Alumno Agenda",
             correo="agenda@example.com",
+            clases_contratadas=12,
         )
         self.client.force_login(self.staff)
 
@@ -368,6 +369,88 @@ class ScheduleGridTests(TestCase):
         self.assertEqual(lesson.ficha_alumno, ficha)
         self.assertEqual(lesson.ficha, 5177)
         self.assertEqual(lesson.lesson_number, 2)
+
+    def test_existing_ficha_cannot_exceed_sold_lesson_quota(self):
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5182,
+            nombre="Alumno Cupo",
+            correo="cupo@example.com",
+            clases_contratadas=1,
+        )
+        DrivingLesson.objects.create(
+            date="2026-06-01",
+            slot_key="0900",
+            start_time=time(9, 0),
+            end_time=time(9, 45),
+            ficha_alumno=ficha,
+            ficha=5182,
+            lesson_number=1,
+            course_kind="OTRO",
+            created_by=self.staff,
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("agendamiento:grid"),
+            {
+                "action": "save_lesson",
+                "start": "2026-06-01",
+                "days": "30",
+                "date": "2026-06-01",
+                "slot_key": "0945",
+                "ficha_alumno": str(ficha.id),
+                "lesson_number": "2",
+                "course_kind": "12_MODULOS",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(DrivingLesson.objects.filter(date="2026-06-01", slot_key="0945").exists())
+        self.assertContains(response, "supera el cupo de la ficha 5182")
+
+    def test_extra_lesson_movement_unlocks_one_more_schedule_slot(self):
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5183,
+            nombre="Alumno Extra",
+            correo="extra-agenda@example.com",
+            clases_contratadas=1,
+        )
+        FichaMovimiento.objects.create(
+            ficha=ficha,
+            tipo=FichaMovimiento.Tipo.CLASE_EXTRA,
+            concepto="Clase extra",
+            monto=25000,
+        )
+        DrivingLesson.objects.create(
+            date="2026-06-01",
+            slot_key="0900",
+            start_time=time(9, 0),
+            end_time=time(9, 45),
+            ficha_alumno=ficha,
+            ficha=5183,
+            lesson_number=1,
+            course_kind="OTRO",
+            created_by=self.staff,
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("agendamiento:grid"),
+            {
+                "action": "save_lesson",
+                "start": "2026-06-01",
+                "days": "30",
+                "date": "2026-06-01",
+                "slot_key": "0945",
+                "ficha_alumno": str(ficha.id),
+                "lesson_number": "2",
+                "course_kind": "12_MODULOS",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(DrivingLesson.objects.filter(date="2026-06-01", slot_key="0945").exists())
 
     def test_staff_can_block_day(self):
         self.client.force_login(self.staff)

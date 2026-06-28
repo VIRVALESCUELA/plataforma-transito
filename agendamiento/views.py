@@ -351,7 +351,6 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
                 "schedules": schedules,
                 "start_date": start_date,
                 "day_count": day_count,
-                "course_choices": CourseKind.choices,
                 "status_choices": LessonStatus.choices,
                 "day_options": [30, 60, 90, 120, 180],
                 "fichas": FichaAlumno.objects.order_by("-numero_ficha")[:500],
@@ -382,6 +381,51 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
     def _get_slot(self, request):
         slot_key = request.POST.get("slot_key", "")
         return slot_key, SLOT_BY_KEY.get(slot_key)
+
+    def _course_kind_for_quota(self, quota):
+        if quota >= 12:
+            return CourseKind.DOCE_MODULOS
+        if quota == 10:
+            return CourseKind.DIEZ_MODULOS
+        if quota == 8:
+            return CourseKind.OCHO_HORAS
+        if quota == 6:
+            return CourseKind.SEIS_HORAS
+        return CourseKind.OTRO
+
+    def _validate_ficha_quota(self, ficha_alumno, ficha, lesson_number, resource, lesson_date, slot_key):
+        if ficha_alumno is None:
+            return True
+
+        quota = ficha_alumno.cupo_clases_practicas
+        if quota <= 0:
+            messages.error(
+                self.request,
+                f"La ficha {ficha} no tiene clases practicas contratadas. Actualiza la ficha antes de agendar.",
+            )
+            return False
+
+        lessons = DrivingLesson.objects.filter(ficha=ficha).exclude(
+            status=LessonStatus.SCHOOL_SUSPENDED
+        )
+        if resource is not None:
+            lessons = lessons.exclude(resource=resource, date=lesson_date, slot_key=slot_key)
+
+        if lesson_number > quota:
+            messages.error(
+                self.request,
+                f"La clase {lesson_number} supera el cupo de la ficha {ficha}: {quota} clases vendidas.",
+            )
+            return False
+
+        if lessons.count() >= quota:
+            messages.error(
+                self.request,
+                f"La ficha {ficha} ya tiene {quota} clases agendadas. Agrega una clase extra en ficha para desbloquear otro cupo.",
+            )
+            return False
+
+        return True
 
     def _save_lesson(self, request):
         resource = self._get_resource(request)
@@ -415,6 +459,7 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
             except (TypeError, ValueError):
                 messages.error(request, "Ingresa una ficha valida.")
                 return self._redirect_to_current_range()
+            ficha_alumno = FichaAlumno.objects.filter(numero_ficha=ficha).first()
 
         if ficha <= 0 or lesson_number <= 0:
             messages.error(request, "Ficha y clase deben ser mayores a cero.")
@@ -442,6 +487,22 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
         if status not in LessonStatus.values:
             status = LessonStatus.SCHEDULED
 
+        if not self._validate_ficha_quota(
+            ficha_alumno,
+            ficha,
+            lesson_number,
+            resource,
+            lesson_date,
+            slot_key,
+        ):
+            return self._redirect_to_current_range()
+
+        course_kind = (
+            self._course_kind_for_quota(ficha_alumno.clases_contratadas)
+            if ficha_alumno is not None
+            else CourseKind.DOCE_MODULOS
+        )
+
         with transaction.atomic():
             DrivingLesson.objects.update_or_create(
                 resource=resource,
@@ -453,7 +514,7 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
                     "ficha_alumno": ficha_alumno,
                     "ficha": ficha,
                     "lesson_number": lesson_number,
-                    "course_kind": request.POST.get("course_kind") or CourseKind.DOCE_MODULOS,
+                    "course_kind": course_kind,
                     "status": status,
                     "is_completed": status == LessonStatus.COMPLETED,
                     "notes": request.POST.get("notes", "")[:240],

@@ -28,6 +28,16 @@ FICHA_COURSE_CHOICES = COURSE_CHOICES + [
     ("Libro", "Libro"),
 ]
 
+PRACTICAL_LESSON_QUOTAS = {
+    "Curso base mecanico": 12,
+    "Curso intensivo": 8,
+    "Curso rush": 10,
+    "Curso domicilio": 8,
+    "Help me!": 1,
+    "Full automatico": 1,
+    "Clase extra": 1,
+}
+
 
 def normalize_chilean_whatsapp(value):
     raw_value = (value or "").strip()
@@ -239,6 +249,7 @@ class FichaAlumnoForm(forms.ModelForm):
             "telefono",
             "direccion",
             "curso",
+            "clases_contratadas",
             "rut",
             "fecha_nacimiento",
             "valor_pagado",
@@ -262,6 +273,9 @@ class FichaAlumnoForm(forms.ModelForm):
                 }
             ),
             "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}),
+            "clases_contratadas": forms.NumberInput(
+                attrs={"min": 0, "placeholder": "Ej: 12"}
+            ),
             "observaciones": forms.Textarea(attrs={"rows": 3}),
         }
 
@@ -275,6 +289,14 @@ class FichaAlumnoForm(forms.ModelForm):
 
     def clean_telefono(self):
         return normalize_chilean_whatsapp(self.cleaned_data.get("telefono"))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        curso = cleaned_data.get("curso") or ""
+        clases_contratadas = cleaned_data.get("clases_contratadas")
+        if clases_contratadas in (None, 0):
+            cleaned_data["clases_contratadas"] = PRACTICAL_LESSON_QUOTAS.get(curso, 0)
+        return cleaned_data
 
 
 class FichaMovimientoForm(forms.ModelForm):

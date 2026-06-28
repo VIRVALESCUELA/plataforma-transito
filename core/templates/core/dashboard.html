@@ -7,6 +7,7 @@
         .student-dashboard {
             display: grid;
             gap: 1.25rem;
+            min-width: 0;
         }
         .student-hero {
             overflow: hidden;
@@ -123,6 +124,14 @@
             background: #fff;
             vertical-align: middle;
         }
+        .attempt-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .attempt-actions form {
+            margin: 0;
+        }
         .access-status-card {
             border: 1px solid rgba(15, 23, 42, 0.08);
             background: #fff;
@@ -200,8 +209,98 @@
             .student-hero {
                 padding: 1.15rem;
             }
+            .student-hero h1 {
+                font-size: 1.75rem;
+            }
             .student-metrics {
                 grid-template-columns: 1fr;
+            }
+            .dashboard-section-title {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 0.65rem;
+            }
+            .dashboard-section-title .pill,
+            .dashboard-section-title .section-kicker,
+            .dashboard-section-title .status-pill {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+            .dashboard-table-wrap {
+                overflow: visible;
+                border: 0;
+                border-radius: 0;
+            }
+            .dashboard-table-wrap table,
+            .dashboard-table-wrap thead,
+            .dashboard-table-wrap tbody,
+            .dashboard-table-wrap tr,
+            .dashboard-table-wrap th,
+            .dashboard-table-wrap td {
+                box-sizing: border-box;
+                display: block;
+                width: 100%;
+            }
+            .dashboard-table-wrap table {
+                background: transparent;
+                box-shadow: none;
+            }
+            .dashboard-table-wrap thead {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+            }
+            .dashboard-table-wrap tr {
+                margin-bottom: 0.9rem;
+                border: 1px solid rgba(15, 23, 42, 0.08);
+                border-radius: 8px;
+                overflow: hidden;
+                background: #fff;
+            }
+            .dashboard-table-wrap td {
+                display: grid;
+                grid-template-columns: minmax(104px, 36%) minmax(0, 1fr);
+                gap: 0.75rem;
+                align-items: start;
+                padding: 0.85rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .dashboard-table-wrap td:last-child {
+                border-bottom: 0;
+            }
+            .dashboard-table-wrap td::before {
+                content: attr(data-label);
+                color: #607d8b;
+                font-size: 0.74rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                text-transform: uppercase;
+            }
+            .topic-materials {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .topic-material-link {
+                justify-content: center;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .exam-template-actions {
+                padding: 0;
+            }
+            .exam-template-actions select {
+                min-width: 0;
+            }
+            .attempt-actions {
+                flex-direction: column;
+            }
+            .attempt-actions .btn,
+            .attempt-actions form {
+                width: 100%;
             }
         }
     </style>
@@ -379,7 +478,7 @@
     <article class="card dashboard-panel">
         {% if exam_progress.topics %}
             <div class="dashboard-table-wrap">
-                <table>
+                <table class="topic-progress-table">
                     <thead>
                         <tr>
                             <th>Tema / Contenido / Descargalo</th>
@@ -391,7 +490,7 @@
                     <tbody>
                         {% for topic in exam_progress.topics %}
                             <tr>
-                                <td>
+                                <td data-label="Tema">
                                     <span>{{ topic.topic }}</span>
                                     {% if topic.materials %}
                                         <div class="topic-materials">
@@ -408,9 +507,9 @@
                                         </div>
                                     {% endif %}
                                 </td>
-                                <td>{{ topic.percent }}%</td>
-                                <td>{{ topic.coverage_percent }}%</td>
-                                <td>{{ topic.answered }}</td>
+                                <td data-label="Rendimiento">{{ topic.percent }}%</td>
+                                <td data-label="Cobertura">{{ topic.coverage_percent }}%</td>
+                                <td data-label="Respondidas">{{ topic.answered }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -501,7 +600,7 @@
     </div>
     {% if history_attempts %}
         <div class="dashboard-table-wrap">
-            <table>
+            <table class="attempt-history-table">
                 <thead>
                     <tr>
                         <th>Plantilla</th>
@@ -515,8 +614,8 @@
                 <tbody>
                     {% for attempt in history_attempts %}
                         <tr>
-                            <td>{{ attempt.template.name }}</td>
-                            <td>
+                            <td data-label="Plantilla">{{ attempt.template.name }}</td>
+                            <td data-label="Estado">
                                 {% if attempt.status == 'ENTREGADO' %}
                                     <span class="status-pill completed">Entregado</span>
                                 {% elif attempt.status == 'EXPIRADO' %}
@@ -525,33 +624,35 @@
                                     <span class="status-pill in-progress">En curso</span>
                                 {% endif %}
                             </td>
-                            <td>{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
-                            <td>
+                            <td data-label="Inicio">{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
+                            <td data-label="Finalizo">
                                 {% if attempt.finished_at %}
                                     {{ attempt.finished_at|date:"d/m/Y H:i" }}
                                 {% else %}
                                     &mdash;
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Puntaje">
                                 {% if attempt.score is not None %}
                                     {{ attempt.score }}%
                                 {% else %}
                                     &mdash;
                                 {% endif %}
                             </td>
-                            <td>
-                                <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
-                                    Ver detalle
-                                </a>
-                                {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
-                                    <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">
-                                            Repetir
-                                        </button>
-                                    </form>
-                                {% endif %}
+                            <td data-label="Acciones">
+                                <div class="attempt-actions">
+                                    <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
+                                        Ver detalle
+                                    </a>
+                                    {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
+                                        <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}">
+                                            {% csrf_token %}
+                                            <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">
+                                                Repetir
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
