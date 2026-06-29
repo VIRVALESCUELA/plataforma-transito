@@ -1,0 +1,279 @@
+{% extends "core/base.html" %}
+{% block title %}Historial de Examenes{% endblock %}
+{% block extra_head %}
+    {{ block.super }}
+    <style>
+        .history-page {
+            display: grid;
+            gap: 1.25rem;
+        }
+        .history-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .history-header h1 {
+            margin: 0;
+            color: #17212f;
+            font-size: clamp(1.7rem, 3vw, 2.25rem);
+            letter-spacing: 0;
+        }
+        .history-header p {
+            margin: 0.35rem 0 0;
+            color: #607d8b;
+        }
+        .history-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+        .history-card {
+            padding: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        }
+        .history-card span {
+            display: block;
+            color: #607d8b;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .history-card strong {
+            display: block;
+            margin-top: 0.3rem;
+            color: #17212f;
+            font-size: 1.25rem;
+        }
+        .history-table-wrap {
+            overflow-x: auto;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            background: #fff;
+        }
+        .history-table {
+            margin: 0;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .history-table th {
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.76rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .history-table td {
+            vertical-align: middle;
+        }
+        .history-topic {
+            display: grid;
+            gap: 0.2rem;
+        }
+        .history-topic small {
+            color: #607d8b;
+            line-height: 1.35;
+        }
+        .history-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .history-actions form {
+            margin: 0;
+        }
+        .history-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 760px) {
+            .history-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .history-table-wrap {
+                overflow: visible;
+                border: 0;
+                background: transparent;
+            }
+            .history-table,
+            .history-table thead,
+            .history-table tbody,
+            .history-table tr,
+            .history-table th,
+            .history-table td {
+                box-sizing: border-box;
+                display: block;
+                width: 100%;
+            }
+            .history-table thead {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+            }
+            .history-table tr {
+                margin-bottom: 0.9rem;
+                border: 1px solid rgba(15, 23, 42, 0.08);
+                border-radius: 8px;
+                overflow: hidden;
+                background: #fff;
+            }
+            .history-table td {
+                display: grid;
+                grid-template-columns: minmax(104px, 36%) minmax(0, 1fr);
+                gap: 0.75rem;
+                padding: 0.85rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .history-table td:last-child {
+                border-bottom: 0;
+            }
+            .history-table td::before {
+                content: attr(data-label);
+                color: #607d8b;
+                font-size: 0.74rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                text-transform: uppercase;
+            }
+            .history-actions,
+            .history-actions .btn,
+            .history-actions form,
+            .history-actions button {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <div class="history-header">
+        <div>
+            <a class="btn btn-outline" href="{% url 'core_web:dashboard' %}">Volver al panel</a>
+            <h1 style="margin-top: 1rem;">Historial de examenes</h1>
+            <p>Revisa tus intentos, puntajes, tema evaluado y repite examenes cuando necesites reforzar.</p>
+        </div>
+    </div>
+
+    <section class="history-summary" aria-label="Resumen del historial">
+        <div class="history-card">
+            <span>Total</span>
+            <strong>{{ total_attempts }}</strong>
+        </div>
+        <div class="history-card">
+            <span>Aprobados</span>
+            <strong>{{ approved_attempts }}</strong>
+        </div>
+        <div class="history-card">
+            <span>Reprobados</span>
+            <strong>{{ failed_attempts }}</strong>
+        </div>
+        <div class="history-card">
+            <span>Promedio</span>
+            <strong>{% if average_score is not None %}{{ average_score|floatformat:1 }}%{% else %}&mdash;{% endif %}</strong>
+        </div>
+    </section>
+
+    {% if history_attempts %}
+        <section class="history-table-wrap">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Examen / resultado</th>
+                        <th>Fecha</th>
+                        <th>Tema</th>
+                        <th>Tiempo de examen</th>
+                        <th>Puntaje</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in history_attempts %}
+                        <tr>
+                            <td data-label="Examen">
+                                <span class="history-topic">
+                                    <strong>Examen {{ attempt.exam_number }}</strong>
+                                    {% if attempt.is_approved %}
+                                        <span class="status-pill completed">Check aprobado</span>
+                                    {% elif attempt.is_failed %}
+                                        <span class="status-pill expired">Reprobado</span>
+                                    {% else %}
+                                        <span class="status-pill in-progress">Pendiente</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td data-label="Fecha">{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
+                            <td data-label="Tema">
+                                <span class="history-topic">
+                                    <strong>{{ attempt.topic_summary }}</strong>
+                                    {% if attempt.topic_detail %}
+                                        <small>{{ attempt.topic_detail }}</small>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td data-label="Tiempo">{{ attempt.duration_label }}</td>
+                            <td data-label="Puntaje">
+                                {% if attempt.score is not None %}
+                                    {{ attempt.score|floatformat:0 }}%
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td data-label="Estado">
+                                {% if attempt.status == 'ENTREGADO' %}
+                                    <span class="status-pill completed">Entregado</span>
+                                {% elif attempt.status == 'EXPIRADO' %}
+                                    <span class="status-pill expired">Expirado</span>
+                                {% else %}
+                                    <span class="status-pill in-progress">En curso</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Acciones">
+                                <div class="history-actions">
+                                    <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">Ver detalle</a>
+                                    {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
+                                        <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}">
+                                            {% csrf_token %}
+                                            <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">Repetir</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        {% if is_paginated %}
+            <nav class="history-pagination" aria-label="Paginacion del historial">
+                {% if page_obj.has_previous %}
+                    <a class="btn btn-outline" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                {% endif %}
+                <span class="meta">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                    <a class="btn btn-outline" href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    {% else %}
+        <section class="card">
+            <h2 style="margin-top: 0;">Aun no hay examenes</h2>
+            <p>Cuando rindas tu primer examen, aparecera aqui con su resultado y detalle.</p>
+            <a class="btn" href="{% url 'core_web:dashboard' %}">Ir al panel</a>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

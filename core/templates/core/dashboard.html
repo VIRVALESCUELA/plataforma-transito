@@ -200,9 +200,68 @@
             color: #0d47a1;
             border-bottom-color: currentColor;
         }
+        .study-panel {
+            display: grid;
+            gap: 1rem;
+        }
+        .study-exam-bar {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(260px, auto);
+            gap: 1rem;
+            align-items: center;
+            padding: 0.95rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .study-exam-title {
+            display: grid;
+            gap: 0.22rem;
+            min-width: 0;
+        }
+        .study-exam-title strong {
+            color: #17212f;
+            font-size: 1rem;
+        }
+        .study-exam-title span {
+            color: #607d8b;
+            font-size: 0.88rem;
+        }
+        .study-exam-actions,
+        .topic-row-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .study-exam-actions form,
+        .topic-row-actions form {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0;
+        }
+        .topic-row-actions {
+            justify-content: flex-start;
+        }
+        .topic-row-actions .btn,
+        .topic-row-actions .topic-material-link {
+            min-height: 36px;
+        }
+        .topic-row-actions .btn {
+            padding: 0.45rem 0.7rem;
+            font-size: 0.88rem;
+        }
         @media (max-width: 900px) {
             .student-metrics {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .study-exam-bar {
+                grid-template-columns: 1fr;
+            }
+            .study-exam-actions,
+            .study-exam-actions form {
+                justify-content: stretch;
             }
         }
         @media (max-width: 640px) {
@@ -283,6 +342,26 @@
             .topic-materials {
                 align-items: stretch;
                 flex-direction: column;
+            }
+            .topic-row-actions,
+            .topic-row-actions form {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+            }
+            .study-exam-actions {
+                align-items: flex-start;
+                justify-content: flex-start;
+            }
+            .study-exam-actions form {
+                align-items: flex-start;
+            }
+            .topic-row-actions .btn,
+            .topic-row-actions .topic-material-link {
+                width: 100%;
+                max-width: none;
+                box-sizing: border-box;
+                justify-content: center;
             }
             .topic-material-link {
                 justify-content: center;
@@ -479,15 +558,38 @@
         {% endif %}
     </div>
     <article class="card dashboard-panel">
+        <div class="study-panel">
+            {% if default_exam_template %}
+                <div class="study-exam-bar">
+                    <div class="study-exam-title">
+                        <strong>Evaluacion teorica</strong>
+                        <span>{{ default_exam_template.total_questions }} preguntas - {{ default_exam_template.duration_minutes }} min - practica todo el banco o inicia desde un tema de la tabla.</span>
+                    </div>
+                    <div class="study-exam-actions">
+                        {% if default_exam_template.active_attempt %}
+                            <a class="btn" href="{% url 'core_web:attempt-detail' default_exam_template.active_attempt.pk %}">Reanudar examen</a>
+                        {% else %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="template_id" value="{{ default_exam_template.id }}">
+                                <button class="btn btn-outline" type="submit">Iniciar examen general</button>
+                            </form>
+                        {% endif %}
+                        <a class="btn btn-outline" href="{% url 'core_web:attempt-history' %}">Historial</a>
+                    </div>
+                </div>
+            {% endif %}
+
         {% if exam_progress.topics %}
             <div class="dashboard-table-wrap">
                 <table class="topic-progress-table">
                     <thead>
                         <tr>
-                            <th>Tema / Contenido / Descargalo</th>
+                            <th>Tema</th>
                             <th>Rendimiento</th>
                             <th>Cobertura</th>
                             <th>Respondidas</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -495,30 +597,42 @@
                             <tr>
                                 <td data-label="Tema">
                                     <span>{{ topic.topic }}</span>
-                                    {% if topic.materials %}
-                                        <div class="topic-materials">
-                                            <span class="meta">Materiales:</span>
-                                            {% for material in topic.materials %}
-                                                <a
-                                                    class="topic-material-link"
-                                                    href="{% static material.path %}"
-                                                    target="_blank"
-                                                    rel="noopener"
-                                                    title="Abrir material de estudio"
-                                                >{{ material.label }}</a>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
                                 </td>
                                 <td data-label="Rendimiento">{{ topic.percent }}%</td>
                                 <td data-label="Cobertura">{{ topic.coverage_percent }}%</td>
                                 <td data-label="Respondidas">{{ topic.answered }}</td>
+                                <td data-label="Acciones">
+                                    <div class="topic-row-actions">
+                                        {% for material in topic.materials %}
+                                            <a
+                                                class="topic-material-link"
+                                                href="{% static material.path %}"
+                                                target="_blank"
+                                                rel="noopener"
+                                                title="Abrir material de estudio"
+                                            >Descargar {{ material.label }}</a>
+                                        {% endfor %}
+                                        {% if default_exam_template and topic.topic_id %}
+                                            {% if default_exam_template.active_attempt %}
+                                                <a class="btn" href="{% url 'core_web:attempt-detail' default_exam_template.active_attempt.pk %}">Reanudar</a>
+                                            {% else %}
+                                                <form method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="template_id" value="{{ default_exam_template.id }}">
+                                                    <input type="hidden" name="topic_id" value="{{ topic.topic_id }}">
+                                                    <button class="btn" type="submit">Iniciar examen</button>
+                                                </form>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% endif %}
+        </div>
 
         {% if exam_progress.weak_topics %}
             <p class="dashboard-note" style="margin-top: 1rem; color: #8a6d3b;">
@@ -529,143 +643,5 @@
 </section>
 {% endif %}
 
-{% if has_exam_access %}
-<section class="dashboard-section">
-    <div class="dashboard-section-title">
-        <h2>Plantillas disponibles</h2>
-        <span class="section-kicker">Evaluacion teorica</span>
-    </div>
-    {% if templates %}
-        <div class="exam-template-list">
-            {% for template in templates %}
-                <article class="card exam-template-card">
-                    <div class="exam-template-main">
-                        <div>
-                            <span class="tag exam-template-tag">Evaluacion teorica</span>
-                            <h3>{{ template.name }}</h3>
-                        </div>
-                        <div class="exam-template-stats">
-                            <div class="exam-template-stat">
-                                <span>Preguntas</span>
-                                <strong>{{ template.total_questions }}</strong>
-                            </div>
-                            <div class="exam-template-stat">
-                                <span>Duracion</span>
-                                <strong>{{ template.duration_minutes }} min</strong>
-                            </div>
-                            <div class="exam-template-stat">
-                                <span>Feedback</span>
-                                <strong>{% if template.show_feedback %}Activado{% else %}No{% endif %}</strong>
-                            </div>
-                        </div>
-                        {% if template.active_attempt %}
-                            <div class="exam-template-actions">
-                                <a class="btn" href="{% url 'core_web:attempt-detail' template.active_attempt.pk %}">Reanudar intento</a>
-                            </div>
-                        {% else %}
-                            <form class="exam-template-actions" method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="template_id" value="{{ template.id }}">
-                                <label class="sr-only" for="topic-{{ template.id }}">Tema del examen</label>
-                                <select id="topic-{{ template.id }}" name="topic_id" aria-label="Tema del examen">
-                                    <option value="">Todos los temas</option>
-                                    {% for topic in topic_choices %}
-                                        <option value="{{ topic.id }}">{{ topic.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <button class="btn" type="submit">Iniciar examen</button>
-                            </form>
-                        {% endif %}
-                    </div>
-                    {% if template.rules_json %}
-                        <div style="margin-top: 1rem; font-size: 0.9rem;">
-                            <strong>Reglas:</strong>
-                            <pre style="background:#f8fafc; padding:0.8rem; border-radius:8px; white-space:pre-wrap;">{{ template.rules_json }}</pre>
-                        </div>
-                    {% endif %}
-                    {% if template.active_attempt %}
-                        <div class="exam-alert info" style="margin-top: 1.25rem;">
-                            Ya tienes un intento en curso para esta plantilla.
-                        </div>
-                    {% endif %}
-                </article>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No hay plantillas cargadas todavia.</p>
-    {% endif %}
-</section>
-
-<section class="dashboard-section">
-    <div class="dashboard-section-title">
-        <h2>Historial de intentos</h2>
-        <span class="pill" style="background: #fff3cd; color: #8a6d3b;">Registro personal</span>
-    </div>
-    {% if history_attempts %}
-        <div class="dashboard-table-wrap">
-            <table class="attempt-history-table">
-                <thead>
-                    <tr>
-                        <th>Plantilla</th>
-                        <th>Estado</th>
-                        <th>Inicio</th>
-                        <th>Finalizo</th>
-                        <th>Puntaje</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for attempt in history_attempts %}
-                        <tr>
-                            <td data-label="Plantilla">{{ attempt.template.name }}</td>
-                            <td data-label="Estado">
-                                {% if attempt.status == 'ENTREGADO' %}
-                                    <span class="status-pill completed">Entregado</span>
-                                {% elif attempt.status == 'EXPIRADO' %}
-                                    <span class="status-pill expired">Expirado</span>
-                                {% else %}
-                                    <span class="status-pill in-progress">En curso</span>
-                                {% endif %}
-                            </td>
-                            <td data-label="Inicio">{{ attempt.started_at|date:"d/m/Y H:i" }}</td>
-                            <td data-label="Finalizo">
-                                {% if attempt.finished_at %}
-                                    {{ attempt.finished_at|date:"d/m/Y H:i" }}
-                                {% else %}
-                                    &mdash;
-                                {% endif %}
-                            </td>
-                            <td data-label="Puntaje">
-                                {% if attempt.score is not None %}
-                                    {{ attempt.score }}%
-                                {% else %}
-                                    &mdash;
-                                {% endif %}
-                            </td>
-                            <td data-label="Acciones">
-                                <div class="attempt-actions">
-                                    <a class="btn btn-outline" href="{% url 'core_web:attempt-detail' attempt.pk %}">
-                                        Ver detalle
-                                    </a>
-                                    {% if attempt.status == 'ENTREGADO' or attempt.status == 'EXPIRADO' %}
-                                        <form method="post" action="{% url 'core_web:attempt-repeat' attempt.pk %}">
-                                            {% csrf_token %}
-                                            <button class="btn" type="submit" onclick="return confirm('Se creara un nuevo intento con las mismas preguntas. ¿Deseas continuar?');">
-                                                Repetir
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p>No hay intentos anteriores para mostrar.</p>
-    {% endif %}
-</section>
-{% endif %}
 </div>
 {% endblock %}

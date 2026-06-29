@@ -603,7 +603,7 @@ class ActivationFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Activar curso")
         self.assertContains(response, "Codigo de activacion")
-        self.assertNotContains(response, "Plantillas disponibles")
+        self.assertNotContains(response, "Evaluacion teorica")
 
     def test_activation_page_is_available_for_logged_in_student(self):
         self.client.force_login(self.user)
@@ -627,7 +627,7 @@ class ActivationFlowTests(TestCase):
         self.assertTrue(self.user.profile.has_active_exam_access())
         self.assertEqual(self.code.used_by, self.user)
         self.assertContains(response, "30 dias de acceso")
-        self.assertContains(response, "Plantillas disponibles")
+        self.assertContains(response, "Evaluacion teorica")
 
     def test_activation_extends_active_access_without_resetting_progress(self):
         first_expiration = timezone.now() + timedelta(days=12)

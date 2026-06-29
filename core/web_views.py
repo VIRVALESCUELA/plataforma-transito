@@ -16,7 +16,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.views.generic import DetailView, FormView, TemplateView, View
+from django.views.generic import DetailView, FormView, ListView, TemplateView, View
 from urllib.parse import quote
 import secrets
 import unicodedata
@@ -119,11 +119,60 @@ def add_material_paths_to_exam_progress(exam_progress):
     if not exam_progress:
         return exam_progress
 
+    topic_ids_by_name = {
+        _normalize_topic_name(topic.name): topic.id for topic in Topic.objects.all()
+    }
     for topic in exam_progress.get("topics", []):
+        normalized_name = _normalize_topic_name(topic.get("topic", ""))
+        topic["topic_id"] = topic_ids_by_name.get(normalized_name)
         topic["materials"] = TOPIC_MATERIALS.get(
-            _normalize_topic_name(topic.get("topic", ""))
+            normalized_name
         ) or []
     return exam_progress
+
+
+def add_history_summary_to_attempts(attempts):
+    def _format_attempt_duration(attempt):
+        if not attempt.started_at or not attempt.finished_at:
+            return "En curso" if attempt.status == ExamAttemptStatus.EN_CURSO else "--"
+        seconds = int((attempt.finished_at - attempt.started_at).total_seconds())
+        if seconds <= 0:
+            return "--"
+        minutes = seconds // 60
+        if minutes < 60:
+            return f"{minutes} min"
+        hours, remaining_minutes = divmod(minutes, 60)
+        return f"{hours}h {remaining_minutes}m"
+
+    total_attempts = len(attempts)
+    for index, attempt in enumerate(attempts, start=1):
+        topics = []
+        seen_topics = set()
+        for exam_question in attempt.exam_questions.all():
+            topic = (exam_question.topic or "Sin tema").strip() or "Sin tema"
+            if topic not in seen_topics:
+                seen_topics.add(topic)
+                topics.append(topic)
+
+        attempt.exam_number = total_attempts - index + 1
+        attempt.question_count = attempt.exam_questions.count()
+        attempt.duration_label = _format_attempt_duration(attempt)
+        attempt.topic_count = len(topics)
+        attempt.topic_summary = topics[0] if len(topics) == 1 else "Todos los temas"
+        attempt.topic_detail = ", ".join(topics[:3])
+        if len(topics) > 3:
+            attempt.topic_detail = f"{attempt.topic_detail} y {len(topics) - 3} mas"
+        attempt.is_approved = (
+            attempt.status == ExamAttemptStatus.ENTREGADO
+            and attempt.score is not None
+            and attempt.score >= 85
+        )
+        attempt.is_failed = (
+            attempt.status == ExamAttemptStatus.ENTREGADO
+            and attempt.score is not None
+            and attempt.score < 85
+        )
+    return attempts
 
 
 class StudentSignupView(FormView):
@@ -814,16 +863,6 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             None,
         ) if has_exam_access else None
         templates = list(ExamTemplate.objects.all())
-        topic_choices = list(
-            Topic.objects.annotate(
-                active_question_count=Count(
-                    "question",
-                    filter=Q(question__is_active=True),
-                )
-            )
-            .filter(active_question_count__gt=0)
-            .order_by("name")
-        )
         for template in templates:
             template.active_attempt = next(
                 (
@@ -836,12 +875,9 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
             )
 
         context["templates"] = templates
-        context["topic_choices"] = topic_choices
+        context["default_exam_template"] = templates[0] if templates else None
         context["attempts"] = attempts
         context["active_attempt"] = active_attempt
-        context["history_attempts"] = [
-            attempt for attempt in attempts if active_attempt is None or attempt.pk != active_attempt.pk
-        ]
         context["average_score"] = (
             sum(
                 attempt.score
@@ -938,6 +974,42 @@ class ExamDashboardView(PrivateAreaMixin, TemplateView):
 
         messages.success(request, "Examen iniciado correctamente.")
         return redirect("core_web:attempt-detail", pk=attempt.pk)
+
+
+class ExamAttemptHistoryView(PrivateAreaMixin, ListView):
+    template_name = "core/exam_attempt_history.html"
+    context_object_name = "history_attempts"
+    paginate_by = 25
+
+    def get_queryset(self):
+        attempts = list(
+            ExamAttempt.objects.filter(student=self.request.user)
+            .select_related("template")
+            .prefetch_related("exam_questions")
+            .order_by("-started_at", "-id")
+        )
+        for attempt in attempts:
+            check_and_expire_attempt(attempt)
+        return add_history_summary_to_attempts(attempts)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        attempts = context["history_attempts"]
+        delivered_attempts = [
+            attempt
+            for attempt in self.object_list
+            if attempt.status == ExamAttemptStatus.ENTREGADO and attempt.score is not None
+        ]
+        context["approved_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score >= 85)
+        context["failed_attempts"] = sum(1 for attempt in delivered_attempts if attempt.score < 85)
+        context["average_score"] = (
+            sum(attempt.score for attempt in delivered_attempts) / len(delivered_attempts)
+            if delivered_attempts
+            else None
+        )
+        context["shown_attempts"] = len(attempts)
+        context["total_attempts"] = len(self.object_list)
+        return context
 
 
 class ExamAttemptDetailView(PrivateAreaMixin, DetailView):

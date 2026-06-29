@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 from .web_views import (
     BlogView,
     CourseActivationView,
+    ExamAttemptHistoryView,
     ExamAttemptDetailView,
     ExamDashboardView,
     FichaAlumnoManagementView,
@@ -35,6 +36,7 @@ urlpatterns = [
     path("panel/gestion/alumnos/<int:user_id>/", StaffStudentAuditView.as_view(), name="staff-student-audit"),
     path("panel/gestion/examenes/<int:pk>/", StaffExamAuditDetailView.as_view(), name="staff-exam-audit"),
     path("panel/", ExamDashboardView.as_view(), name="dashboard"),
+    path("panel/historial/", ExamAttemptHistoryView.as_view(), name="attempt-history"),
     path("panel/attempts/<int:pk>/", ExamAttemptDetailView.as_view(), name="attempt-detail"),
     path("panel/attempts/<int:pk>/repeat/", RepeatExamAttemptView.as_view(), name="attempt-repeat"),
     path(
