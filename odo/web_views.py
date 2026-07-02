@@ -3,14 +3,15 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.shortcuts import redirect
-from django.views.generic import TemplateView
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import TemplateView, View
 
 from .forms import (
     FuelEntryForm,
     MaintenanceRecordForm,
     MaintenanceScheduleForm,
     VehicleAccessForm,
+    VehicleDocumentForm,
     VehicleForm,
 )
 from .models import (
@@ -22,8 +23,9 @@ from .models import (
     OdometerReadingSource,
     Vehicle,
     VehicleAccess,
+    VehicleDocument,
 )
-from .permissions import accessible_vehicles_for, user_can_use_odo
+from .permissions import accessible_vehicles_for, user_can_access_vehicle, user_can_use_odo
 from .services import evaluate_vehicle_alerts, record_odometer
 
 
@@ -92,7 +94,7 @@ class OdoContextMixin:
         context = super().get_context_data(**kwargs)
         vehicles = (
             accessible_vehicles_for(self.request.user)
-            .prefetch_related("maintenance_alerts", "maintenance_schedules")
+            .prefetch_related("documents", "maintenance_alerts", "maintenance_schedules")
             .order_by("plate")
         )
         context["vehicles"] = vehicles
@@ -107,6 +109,9 @@ class OdoContextMixin:
         context["service_count"] = FuelEntry.objects.filter(vehicle__in=vehicles).count()
         context["vehicle_form"] = kwargs.get("vehicle_form") or VehicleForm()
         context["access_form"] = kwargs.get("access_form") or VehicleAccessForm()
+        context["document_form"] = kwargs.get("document_form") or VehicleDocumentForm(
+            user=self.request.user
+        )
         context["fuel_form"] = kwargs.get("fuel_form") or FuelEntryForm(
             user=self.request.user
         )
@@ -131,6 +136,11 @@ class OdoContextMixin:
                     vehicle,
                     WATCHED_SCHEDULE_NAMES["permit"],
                 ),
+                "document_issue_count": sum(
+                    1
+                    for document in vehicle.documents.all()
+                    if document.status_class in ["warning", "critical"]
+                ),
                 "open_alert_count": vehicle.maintenance_alerts.filter(
                     status=MaintenanceAlertStatus.OPEN
                 ).count(),
@@ -146,6 +156,29 @@ class OdoContextMixin:
         context["recent_maintenance_records"] = MaintenanceRecord.objects.filter(
             vehicle__in=vehicles
         ).select_related("vehicle")[:6]
+        documents = list(
+            VehicleDocument.objects.filter(
+                vehicle__in=vehicles
+            )
+            .select_related("vehicle", "uploaded_by")
+            .order_by("vehicle__plate", "expires_at", "document_type", "-created_at")
+        )
+        context["recent_documents"] = documents
+        context["document_groups"] = [
+            {
+                "vehicle": vehicle,
+                "documents": [
+                    document for document in documents if document.vehicle_id == vehicle.id
+                ],
+            }
+            for vehicle in vehicles
+            if any(document.vehicle_id == vehicle.id for document in documents)
+        ]
+        context["expiring_documents"] = [
+            document
+            for document in documents
+            if document.status_class in ["warning", "critical"]
+        ]
         context["pending_schedules"] = MaintenanceSchedule.objects.filter(
             vehicle__in=vehicles,
             status__in=[
@@ -285,3 +318,80 @@ class OdoMaintenanceView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
             return redirect("odo_web:maintenance")
         messages.error(request, "Revisa los datos del registro de mantencion.")
         return self.render_to_response(self.get_context_data(record_form=form))
+
+
+class OdoDocumentsView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
+    template_name = "odo/documents.html"
+
+    def post(self, request, *args, **kwargs):
+        form = VehicleDocumentForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            document = form.save(uploaded_by=request.user)
+            messages.success(
+                request,
+                f"Documento {document.get_document_type_display()} cargado para {document.vehicle.plate}.",
+            )
+            return redirect("odo_web:documents")
+        messages.error(request, "Revisa los datos del documento.")
+        return self.render_to_response(self.get_context_data(document_form=form))
+
+
+class OdoDocumentEditView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
+    template_name = "odo/document_edit.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.document = get_object_or_404(
+            VehicleDocument.objects.select_related("vehicle"),
+            pk=kwargs["pk"],
+        )
+        if not user_can_access_vehicle(request.user, self.document.vehicle):
+            messages.error(request, "No tienes acceso a esa patente.")
+            return redirect("odo_web:documents")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["document"] = self.document
+        context["document_form"] = kwargs.get("document_form") or VehicleDocumentForm(
+            instance=self.document,
+            user=self.request.user,
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        old_file = self.document.file
+        form = VehicleDocumentForm(
+            request.POST,
+            request.FILES,
+            instance=self.document,
+            user=request.user,
+        )
+        if form.is_valid():
+            document = form.save(uploaded_by=request.user)
+            if (
+                old_file
+                and "file" in form.changed_data
+                and old_file.name != document.file.name
+            ):
+                old_file.delete(save=False)
+            messages.success(request, "Documento actualizado.")
+            return redirect("odo_web:documents")
+        messages.error(request, "Revisa los datos del documento.")
+        return self.render_to_response(self.get_context_data(document_form=form))
+
+
+class OdoDocumentDeleteView(OdoStaffRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        document = get_object_or_404(
+            VehicleDocument.objects.select_related("vehicle"),
+            pk=kwargs["pk"],
+        )
+        if not user_can_access_vehicle(request.user, document.vehicle):
+            messages.error(request, "No tienes acceso a esa patente.")
+            return redirect("odo_web:documents")
+        document_file = document.file
+        document.delete()
+        if document_file:
+            document_file.delete(save=False)
+        messages.success(request, "Documento eliminado.")
+        return redirect("odo_web:documents")

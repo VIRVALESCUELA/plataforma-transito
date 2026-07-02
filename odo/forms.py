@@ -10,6 +10,7 @@ from .models import (
     MaintenanceSchedule,
     Vehicle,
     VehicleAccess,
+    VehicleDocument,
     normalize_plate,
     validate_plate,
 )
@@ -296,6 +297,38 @@ class VehicleAccessForm(forms.ModelForm):
         self.fields["vehicle"].queryset = Vehicle.objects.all().order_by("plate")
         self.fields["user"].empty_label = "Selecciona staff"
         self.fields["vehicle"].empty_label = "Selecciona patente"
+
+
+class VehicleDocumentForm(OwnerVehicleFormMixin, forms.ModelForm):
+    vehicle = forms.ModelChoiceField(
+        queryset=Vehicle.objects.none(),
+        label="Vehiculo",
+        empty_label="Selecciona vehiculo",
+    )
+
+    class Meta:
+        model = VehicleDocument
+        fields = ["vehicle", "document_type", "file", "issued_at", "expires_at", "notes"]
+        labels = {
+            "document_type": "Tipo de documento",
+            "file": "Archivo",
+            "issued_at": "Fecha de emision",
+            "expires_at": "Fecha de vencimiento",
+            "notes": "Notas",
+        }
+        widgets = {
+            "issued_at": forms.DateInput(attrs={"type": "date"}),
+            "expires_at": forms.DateInput(attrs={"type": "date"}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def save(self, commit=True, uploaded_by=None):
+        instance = super().save(commit=False)
+        if uploaded_by is not None:
+            instance.uploaded_by = uploaded_by
+        if commit:
+            instance.save()
+        return instance
 
 
 class FuelEntryForm(OwnerVehicleFormMixin, forms.ModelForm):

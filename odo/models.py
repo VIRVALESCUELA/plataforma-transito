@@ -79,6 +79,83 @@ class VehicleAccess(models.Model):
         return f"{self.user} -> {self.vehicle.plate}"
 
 
+class VehicleDocumentType(models.TextChoices):
+    TECHNICAL_INSPECTION = "TECHNICAL_INSPECTION", "Revision tecnica"
+    EMISSIONS = "EMISSIONS", "Gases"
+    CIRCULATION_PERMIT = "CIRCULATION_PERMIT", "Permiso circulacion"
+    SOAP = "SOAP", "SOAP"
+    INSURANCE = "INSURANCE", "Seguro automotriz"
+    DRIVER_LICENSE = "DRIVER_LICENSE", "Licencia conductor"
+    REGISTRATION = "REGISTRATION", "Padron"
+    OTHER = "OTHER", "Otro"
+
+
+def vehicle_document_upload_path(instance, filename):
+    plate = normalize_plate(instance.vehicle.plate if instance.vehicle_id else "sinpatente")
+    document_type = (instance.document_type or "documento").lower()
+    return f"odo/documentos/{plate}/{document_type}/{filename}"
+
+
+class VehicleDocument(models.Model):
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name="documents",
+    )
+    document_type = models.CharField(
+        max_length=32,
+        choices=VehicleDocumentType.choices,
+    )
+    file = models.FileField(upload_to=vehicle_document_upload_path)
+    issued_at = models.DateField(null=True, blank=True)
+    expires_at = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="odo_documents_uploaded",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["expires_at", "vehicle__plate", "document_type"]
+        verbose_name = "Documento de vehiculo"
+        verbose_name_plural = "Documentos de vehiculos"
+
+    @property
+    def days_until_expiration(self):
+        if not self.expires_at:
+            return None
+        return (self.expires_at - timezone.localdate()).days
+
+    @property
+    def status_label(self):
+        days = self.days_until_expiration
+        if days is None:
+            return "Sin vencimiento"
+        if days < 0:
+            return "Vencido"
+        if days <= 30:
+            return "Por vencer"
+        return "Vigente"
+
+    @property
+    def status_class(self):
+        days = self.days_until_expiration
+        if days is None:
+            return "neutral"
+        if days < 0:
+            return "critical"
+        if days <= 30:
+            return "warning"
+        return "ok"
+
+    def __str__(self):
+        return f"{self.vehicle.plate}: {self.get_document_type_display()}"
+
+
 class OdometerReadingSource(models.TextChoices):
     MANUAL = "MANUAL", "Manual"
     FUEL = "FUEL", "Carga de combustible"

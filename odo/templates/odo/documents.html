@@ -1,0 +1,122 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Documentos{% endblock %}
+{% block odo_subtitle %}Carga revision tecnica, gases, permiso, licencia y otros documentos por patente.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Subir documento</h2>
+        {% if vehicles %}
+            <form class="odo-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% for field in document_form %}
+                    <div class="odo-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                {{ document_form.non_field_errors }}
+                <button class="btn" type="submit">Guardar documento</button>
+            </form>
+        {% else %}
+            <p class="odo-empty">Aun no tienes una patente asignada.</p>
+        {% endif %}
+    </div>
+
+    <div class="odo-panel">
+        <h2>Documentos por vencer</h2>
+        {% if expiring_documents %}
+            <div class="odo-list">
+                {% for document in expiring_documents %}
+                    <div class="odo-row">
+                        <div>
+                            <span class="odo-plate">{{ document.vehicle.plate }}</span>
+                            <div class="odo-muted">
+                                {{ document.get_document_type_display }}
+                                {% if document.expires_at %}
+                                    · vence {{ document.expires_at|date:"d/m/Y" }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <strong>{{ document.status_label }}</strong><br>
+                            <span class="odo-muted">
+                                {% if document.days_until_expiration is not None %}
+                                    {{ document.days_until_expiration }} dias
+                                {% else %}
+                                    Sin fecha
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="odo-empty">No hay documentos vencidos o por vencer en los ultimos registros.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="odo-panel">
+    <h2>Documentos cargados</h2>
+    {% if document_groups %}
+        {% for group in document_groups %}
+            <section class="odo-document-group">
+                <div class="odo-document-heading">
+                    <div>
+                        <span class="odo-plate">{{ group.vehicle.plate }}</span>
+                        <p class="odo-muted">
+                            {{ group.vehicle.alias|default:"Sin VIN" }}
+                            {% if group.vehicle.brand or group.vehicle.model %}
+                                · {{ group.vehicle.brand }} {{ group.vehicle.model }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="odo-muted">{{ group.documents|length }} documento(s)</span>
+                </div>
+                <div class="odo-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Documento</th>
+                                <th>Emision</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                                <th>Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in group.documents %}
+                                <tr>
+                                    <td>{{ document.get_document_type_display }}</td>
+                                    <td>{% if document.issued_at %}{{ document.issued_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
+                                    <td>{% if document.expires_at %}{{ document.expires_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
+                                    <td>{{ document.status_label }}</td>
+                                    <td>
+                                        <div class="odo-actions">
+                                            {% if document.file %}
+                                                <a class="btn btn-outline" href="{{ document.file.url }}" target="_blank" rel="noopener">Ver</a>
+                                            {% endif %}
+                                            <a class="btn btn-outline" href="{% url 'odo_web:document-edit' document.pk %}">Editar</a>
+                                            <form method="post" action="{% url 'odo_web:document-delete' document.pk %}">
+                                                {% csrf_token %}
+                                                <button class="btn btn-outline" type="submit" onclick="return confirm('Se eliminara este documento y su archivo. ¿Deseas continuar?');">Eliminar</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td>{{ document.notes|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endfor %}
+    {% else %}
+        <p class="odo-empty">No hay documentos cargados.</p>
+    {% endif %}
+</div>
+{% endblock %}

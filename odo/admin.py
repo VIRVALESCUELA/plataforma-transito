@@ -8,6 +8,7 @@ from .models import (
     OdometerReading,
     Vehicle,
     VehicleAccess,
+    VehicleDocument,
 )
 
 
@@ -23,6 +24,20 @@ class VehicleAccessAdmin(admin.ModelAdmin):
     list_display = ("vehicle", "user", "created_at")
     list_filter = ("created_at",)
     search_fields = ("vehicle__plate", "user__email", "user__username")
+
+
+@admin.register(VehicleDocument)
+class VehicleDocumentAdmin(admin.ModelAdmin):
+    list_display = (
+        "vehicle",
+        "document_type",
+        "issued_at",
+        "expires_at",
+        "uploaded_by",
+        "created_at",
+    )
+    list_filter = ("document_type", "expires_at", "created_at")
+    search_fields = ("vehicle__plate", "notes", "uploaded_by__email", "uploaded_by__username")
 
 
 @admin.register(OdometerReading)

@@ -86,7 +86,7 @@
         position: relative;
         z-index: 1;
         display: grid;
-        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 0.55rem;
     }
     .odo-nav a {
@@ -123,7 +123,7 @@
         grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
     }
     .odo-status-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
     .odo-form {
         display: grid;
@@ -323,6 +323,41 @@
     .odo-table-wrap table td {
         background: #fff;
     }
+    .odo-actions {
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .odo-actions form {
+        margin: 0;
+    }
+    .odo-actions .btn {
+        width: auto;
+        min-height: 36px;
+        padding: 0.45rem 0.75rem;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+    .odo-document-group {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    .odo-document-group + .odo-document-group {
+        padding-top: 1rem;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .odo-document-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .odo-document-heading .odo-muted {
+        margin: 0;
+    }
     @media (max-width: 900px) {
         .odo-header,
         .odo-two-col,
@@ -378,6 +413,7 @@
             {% if user.is_superuser %}
                 <a class="{% if request.resolver_match.url_name == 'access' %}is-active{% endif %}" href="{% url 'odo_web:access' %}">Asignar patentes</a>
             {% endif %}
+            <a class="{% if request.resolver_match.url_name == 'documents' %}is-active{% endif %}" href="{% url 'odo_web:documents' %}">Documentos</a>
             <a class="{% if request.resolver_match.url_name == 'alerts' %}is-active{% endif %}" href="{% url 'odo_web:alerts' %}">Alertas</a>
             <a class="{% if request.resolver_match.url_name == 'maintenance' %}is-active{% endif %}" href="{% url 'odo_web:maintenance' %}">Mantenciones</a>
         </nav>

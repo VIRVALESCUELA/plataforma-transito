@@ -1,0 +1,52 @@
+{% extends "odo/base.html" %}
+
+{% block odo_title %}Editar documento{% endblock %}
+{% block odo_subtitle %}Actualiza archivo, fechas o notas del documento cargado.{% endblock %}
+
+{% block odo_content %}
+<div class="odo-two-col">
+    <div class="odo-panel">
+        <h2>Editar documento</h2>
+        <form class="odo-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in document_form %}
+                <div class="odo-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+            {{ document_form.non_field_errors }}
+            <button class="btn" type="submit">Guardar cambios</button>
+        </form>
+    </div>
+
+    <div class="odo-panel">
+        <h2>Documento actual</h2>
+        <div class="odo-list">
+            <div class="odo-row">
+                <div>
+                    <span class="odo-plate">{{ document.vehicle.plate }}</span>
+                    <div class="odo-muted">{{ document.get_document_type_display }}</div>
+                </div>
+                <div>
+                    <strong>{{ document.status_label }}</strong><br>
+                    <span class="odo-muted">
+                        {% if document.expires_at %}
+                            vence {{ document.expires_at|date:"d/m/Y" }}
+                        {% else %}
+                            sin vencimiento
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="odo-actions" style="margin-top: 1rem;">
+            {% if document.file %}
+                <a class="btn btn-outline" href="{{ document.file.url }}" target="_blank" rel="noopener">Ver archivo</a>
+            {% endif %}
+            <a class="btn btn-outline" href="{% url 'odo_web:documents' %}">Volver</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

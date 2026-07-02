@@ -3,6 +3,7 @@
 db.sqlite3
 db.sqlite3.backup-*
 staticfiles/
+media/odo/
 __pycache__/
 *.pyc
 core/static/core/autofavitransparente.png

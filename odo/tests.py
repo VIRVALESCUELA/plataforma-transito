@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core import mail
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -15,6 +16,7 @@ from .models import (
     OdometerReadingSource,
     Vehicle,
     VehicleAccess,
+    VehicleDocument,
 )
 from .serializers import FuelEntrySerializer
 from .services import record_odometer
@@ -537,6 +539,38 @@ class OdoDashboardWebTests(TestCase):
         self.assertEqual(vehicle.current_odometer, 9800)
         self.assertContains(response, "Aceite motor")
         self.assertContains(response, "3 mantencion(es) registrada(s)")
+
+    def test_user_can_upload_vehicle_document(self):
+        vehicle = Vehicle.objects.create(
+            owner=self.user,
+            plate="DOCU12",
+            current_odometer=9000,
+        )
+        VehicleAccess.objects.create(vehicle=vehicle, user=self.user)
+        uploaded_file = SimpleUploadedFile(
+            "revision.pdf",
+            b"documento de prueba",
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(
+            reverse("odo_web:documents"),
+            {
+                "vehicle": vehicle.id,
+                "document_type": "TECHNICAL_INSPECTION",
+                "file": uploaded_file,
+                "issued_at": "2026-06-01",
+                "expires_at": "2027-06-01",
+                "notes": "Revision cargada",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        document = VehicleDocument.objects.get(vehicle=vehicle)
+        self.assertEqual(document.document_type, "TECHNICAL_INSPECTION")
+        self.assertEqual(document.uploaded_by, self.user)
+        self.assertContains(response, "Revision tecnica")
 
     def test_non_staff_cannot_access_odo(self):
         user_model = get_user_model()
