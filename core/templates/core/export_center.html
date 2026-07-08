@@ -1,0 +1,91 @@
+{% extends "core/base.html" %}
+{% block title %}Exportaciones{% endblock %}
+
+{% block content %}
+<style>
+    .export-shell {
+        display: grid;
+        gap: 1.25rem;
+    }
+    .export-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+    .export-card {
+        display: grid;
+        gap: 0.85rem;
+        align-content: start;
+    }
+    .export-card h2 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+    .export-card p {
+        margin: 0;
+        color: #455a64;
+        line-height: 1.45;
+    }
+    .export-meta {
+        color: var(--brand-text);
+        font-weight: 800;
+    }
+    .export-note {
+        border-left: 4px solid var(--brand-amber);
+        padding-left: 0.9rem;
+        color: #455a64;
+    }
+    @media (max-width: 980px) {
+        .export-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<a href="{% url 'core_web:internal-management' %}" class="btn btn-outline page-back-link">&larr; Volver</a>
+
+<div class="export-shell">
+    <section class="card">
+        <span class="pill" style="width: fit-content;">Solo superusuario</span>
+        <h1 style="margin:0.6rem 0 0;">Exportaciones</h1>
+        <p style="max-width: 780px;">
+            Descargas administrativas para respaldo y revision del dueno. Los archivos se entregan en ZIP con CSV separados por tabla o area.
+        </p>
+        <p class="export-note">
+            Estos archivos pueden incluir datos personales, pagos, correos, telefonos, documentos y mantenciones. No compartas esta vista con usuarios ni personal sin autorizacion.
+        </p>
+    </section>
+
+    <section class="export-grid" aria-label="Descargas disponibles">
+        <article class="card export-card">
+            <h2>Fichas</h2>
+            <p>Exporta fichas de alumnos y movimientos de pago en archivos separados.</p>
+            <span class="export-meta">{{ fichas_count }} fichas registradas</span>
+            <a class="btn" href="{% url 'core_web:export-download' 'fichas' %}">Descargar fichas</a>
+        </article>
+
+        <article class="card export-card">
+            <h2>Gestion</h2>
+            <p>Exporta alumnos, inscripciones, codigos de activacion e intentos de examen.</p>
+            <span class="export-meta">{{ students_count }} alumnos - {{ inscripciones_count }} inscripciones</span>
+            <a class="btn" href="{% url 'core_web:export-download' 'gestion' %}">Descargar gestion</a>
+        </article>
+
+        <article class="card export-card">
+            <h2>ODO</h2>
+            <p>Exporta vehiculos, accesos, documentos, odometros, combustible, mantenciones y alertas.</p>
+            <span class="export-meta">
+                {% if odo_vehicles_count is not None %}{{ odo_vehicles_count }} vehiculos{% else %}Modulo no disponible{% endif %}
+            </span>
+            <a class="btn" href="{% url 'core_web:export-download' 'odo' %}">Descargar ODO</a>
+        </article>
+
+        <article class="card export-card">
+            <h2>Balance</h2>
+            <p>Exporta resumen mensual, ingresos por producto, gastos por concepto y detalle de gastos manuales.</p>
+            <span class="export-meta">Periodo actual</span>
+            <a class="btn" href="{% url 'core_web:export-download' 'balance' %}">Descargar balance</a>
+        </article>
+    </section>
+</div>
+{% endblock %}

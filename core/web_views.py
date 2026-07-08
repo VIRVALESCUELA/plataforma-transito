@@ -1,4 +1,7 @@
+import csv
 from datetime import timedelta
+from io import BytesIO, StringIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -11,6 +14,7 @@ from django.conf import settings
 from django.db import DatabaseError
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q, Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -302,6 +306,43 @@ class StaffRequiredMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         messages.error(self.request, "No tienes permisos para acceder a esta seccion.")
         return redirect("core_web:dashboard")
+
+
+class SuperuserRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return bool(self.request.user and self.request.user.is_superuser)
+
+    def handle_no_permission(self):
+        messages.error(self.request, "Solo el administrador dueno puede acceder a exportaciones.")
+        return redirect("core_web:dashboard")
+
+
+def _format_export_value(value):
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+def _csv_bytes(headers, rows):
+    output = StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow([_format_export_value(value) for value in row])
+    return output.getvalue().encode("utf-8")
+
+
+def _zip_response(filename, files):
+    archive = BytesIO()
+    with ZipFile(archive, "w", ZIP_DEFLATED) as zip_file:
+        for file_name, content in files:
+            zip_file.writestr(file_name, content)
+    response = HttpResponse(archive.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 class PublicLogoutView(View):
@@ -623,6 +664,729 @@ class StaffInternalManagementView(PrivateAreaMixin, StaffRequiredMixin, Template
     template_name = "core/staff_internal_management.html"
 
 
+class ExportCenterView(PrivateAreaMixin, SuperuserRequiredMixin, TemplateView):
+    template_name = "core/export_center.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["fichas_count"] = FichaAlumno.objects.count()
+        context["inscripciones_count"] = Inscripcion.objects.count()
+        context["students_count"] = Profile.objects.filter(role=UserRole.ALUMNO).count()
+        try:
+            from odo.models import Vehicle
+
+            context["odo_vehicles_count"] = Vehicle.objects.count()
+        except Exception:
+            context["odo_vehicles_count"] = None
+        return context
+
+
+class ExportDownloadView(PrivateAreaMixin, SuperuserRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        export_kind = kwargs.get("kind")
+        if export_kind == "fichas":
+            return self._export_fichas()
+        if export_kind == "gestion":
+            return self._export_gestion()
+        if export_kind == "odo":
+            return self._export_odo()
+        if export_kind == "balance":
+            return self._export_balance()
+        messages.error(request, "Exportacion no disponible.")
+        return redirect("core_web:export-center")
+
+    def _export_year(self):
+        current_year = timezone.localdate().year
+        try:
+            year = int(self.request.GET.get("anio", current_year))
+        except (TypeError, ValueError):
+            year = current_year
+        return max(2013, min(year, current_year + 1))
+
+    def _export_fichas(self):
+        fichas = (
+            FichaAlumno.objects.select_related("inscripcion", "user")
+            .annotate(
+                total_movimientos=Sum("movimientos__monto"),
+                cantidad_movimientos=Count("movimientos", distinct=True),
+            )
+            .order_by("numero_ficha")
+        )
+        fichas_csv = _csv_bytes(
+            [
+                "id",
+                "numero_ficha",
+                "fecha_inscripcion",
+                "nombre",
+                "correo",
+                "telefono",
+                "direccion",
+                "curso",
+                "clases_contratadas",
+                "clases_extra_vendidas",
+                "cupo_clases_practicas",
+                "rut",
+                "fecha_nacimiento",
+                "edad",
+                "valor_pagado_inicial",
+                "forma_pago_inicial",
+                "total_movimientos",
+                "cantidad_movimientos",
+                "inscripcion_id",
+                "user_id",
+                "observaciones",
+                "created_at",
+                "updated_at",
+            ],
+            (
+                [
+                    ficha.id,
+                    ficha.numero_ficha,
+                    ficha.fecha_inscripcion,
+                    ficha.nombre,
+                    ficha.correo,
+                    ficha.telefono,
+                    ficha.direccion,
+                    ficha.curso,
+                    ficha.clases_contratadas,
+                    ficha.clases_extra_vendidas,
+                    ficha.cupo_clases_practicas,
+                    ficha.rut,
+                    ficha.fecha_nacimiento,
+                    ficha.edad,
+                    ficha.valor_pagado,
+                    ficha.get_forma_pago_display() if ficha.forma_pago else "",
+                    ficha.total_movimientos if ficha.total_movimientos is not None else ficha.valor_pagado,
+                    ficha.cantidad_movimientos,
+                    ficha.inscripcion_id,
+                    ficha.user_id,
+                    ficha.observaciones,
+                    ficha.created_at,
+                    ficha.updated_at,
+                ]
+                for ficha in fichas
+            ),
+        )
+        movimientos = FichaMovimiento.objects.select_related("ficha").order_by(
+            "ficha__numero_ficha", "fecha", "id"
+        )
+        movimientos_csv = _csv_bytes(
+            [
+                "id",
+                "ficha_id",
+                "numero_ficha",
+                "fecha",
+                "tipo",
+                "concepto",
+                "monto",
+                "es_inicial",
+                "forma_pago",
+                "observaciones",
+                "created_at",
+                "updated_at",
+            ],
+            (
+                [
+                    movimiento.id,
+                    movimiento.ficha_id,
+                    movimiento.ficha.numero_ficha,
+                    movimiento.fecha,
+                    movimiento.get_tipo_display(),
+                    movimiento.concepto,
+                    movimiento.monto,
+                    movimiento.es_inicial,
+                    movimiento.get_forma_pago_display() if movimiento.forma_pago else "",
+                    movimiento.observaciones,
+                    movimiento.created_at,
+                    movimiento.updated_at,
+                ]
+                for movimiento in movimientos
+            ),
+        )
+        return _zip_response(
+            "exportacion_fichas.zip",
+            [
+                ("fichas.csv", fichas_csv),
+                ("movimientos_fichas.csv", movimientos_csv),
+            ],
+        )
+
+    def _export_gestion(self):
+        attempts = (
+            ExamAttempt.objects.select_related("student", "template")
+            .order_by("student__username", "-started_at")
+        )
+        profiles = (
+            Profile.objects.select_related("user")
+            .filter(role=UserRole.ALUMNO)
+            .annotate(
+                attempt_count=Count("user__examattempt", distinct=True),
+                delivered_count=Count(
+                    "user__examattempt",
+                    filter=Q(user__examattempt__status=ExamAttemptStatus.ENTREGADO),
+                    distinct=True,
+                ),
+                average_score=Avg(
+                    "user__examattempt__score",
+                    filter=Q(user__examattempt__status=ExamAttemptStatus.ENTREGADO),
+                ),
+            )
+            .order_by("user__username")
+        )
+        alumnos_csv = _csv_bytes(
+            [
+                "user_id",
+                "username",
+                "email",
+                "nombre",
+                "apellido",
+                "rol",
+                "access_activated_at",
+                "access_expires_at",
+                "curso_activado",
+                "acceso_activo",
+                "intentos",
+                "examenes_entregados",
+                "promedio",
+                "date_joined",
+                "last_login",
+            ],
+            (
+                [
+                    profile.user_id,
+                    profile.user.username,
+                    profile.user.email,
+                    profile.user.first_name,
+                    profile.user.last_name,
+                    profile.get_role_display(),
+                    profile.access_activated_at,
+                    profile.access_expires_at,
+                    profile.activated_course_name,
+                    profile.has_active_exam_access(),
+                    profile.attempt_count,
+                    profile.delivered_count,
+                    profile.average_score,
+                    profile.user.date_joined,
+                    profile.user.last_login,
+                ]
+                for profile in profiles
+            ),
+        )
+        inscripciones = (
+            Inscripcion.objects.select_related("activation_code", "user", "ficha_alumno")
+            .order_by("-created_at")
+        )
+        inscripciones_csv = _csv_bytes(
+            [
+                "id",
+                "created_at",
+                "nombre",
+                "comuna",
+                "direccion",
+                "correo",
+                "telefono",
+                "curso",
+                "estado",
+                "activation_code",
+                "user_id",
+                "numero_ficha",
+            ],
+            (
+                [
+                    inscripcion.id,
+                    inscripcion.created_at,
+                    inscripcion.nombre,
+                    inscripcion.comuna,
+                    inscripcion.direccion,
+                    inscripcion.correo,
+                    inscripcion.telefono,
+                    inscripcion.curso,
+                    inscripcion.get_status_display(),
+                    inscripcion.activation_code.code if inscripcion.activation_code else "",
+                    inscripcion.user_id,
+                    inscripcion.ficha_alumno.numero_ficha
+                    if hasattr(inscripcion, "ficha_alumno")
+                    else "",
+                ]
+                for inscripcion in inscripciones
+            ),
+        )
+        codigos = ActivationCode.objects.select_related("used_by").order_by("-created_at")
+        codigos_csv = _csv_bytes(
+            [
+                "id",
+                "code",
+                "course_name",
+                "duration_days",
+                "is_enabled",
+                "sent_to_email",
+                "used_by_id",
+                "used_by",
+                "used_at",
+                "created_at",
+            ],
+            (
+                [
+                    code.id,
+                    code.code,
+                    code.course_name,
+                    code.duration_days,
+                    code.is_enabled,
+                    code.sent_to_email,
+                    code.used_by_id,
+                    code.used_by.username if code.used_by else "",
+                    code.used_at,
+                    code.created_at,
+                ]
+                for code in codigos
+            ),
+        )
+        intentos_csv = _csv_bytes(
+            [
+                "id",
+                "student_id",
+                "student_username",
+                "template",
+                "status",
+                "started_at",
+                "finished_at",
+                "score",
+            ],
+            (
+                [
+                    attempt.id,
+                    attempt.student_id,
+                    attempt.student.username,
+                    attempt.template.name,
+                    attempt.get_status_display(),
+                    attempt.started_at,
+                    attempt.finished_at,
+                    attempt.score,
+                ]
+                for attempt in attempts
+            ),
+        )
+        return _zip_response(
+            "exportacion_gestion.zip",
+            [
+                ("alumnos.csv", alumnos_csv),
+                ("inscripciones.csv", inscripciones_csv),
+                ("codigos_activacion.csv", codigos_csv),
+                ("intentos_examen.csv", intentos_csv),
+            ],
+        )
+
+    def _export_odo(self):
+        from odo.models import (
+            FuelEntry,
+            MaintenanceAlert,
+            MaintenanceRecord,
+            MaintenanceSchedule,
+            OdometerReading,
+            Vehicle,
+            VehicleAccess,
+            VehicleDocument,
+        )
+
+        vehicles = Vehicle.objects.select_related("owner").order_by("plate")
+        vehiculos_csv = _csv_bytes(
+            [
+                "id",
+                "patente",
+                "alias",
+                "marca",
+                "modelo",
+                "anio",
+                "odometro_actual",
+                "owner_id",
+                "owner",
+                "created_at",
+                "updated_at",
+            ],
+            (
+                [
+                    vehicle.id,
+                    vehicle.plate,
+                    vehicle.alias,
+                    vehicle.brand,
+                    vehicle.model,
+                    vehicle.year,
+                    vehicle.current_odometer,
+                    vehicle.owner_id,
+                    vehicle.owner.username,
+                    vehicle.created_at,
+                    vehicle.updated_at,
+                ]
+                for vehicle in vehicles
+            ),
+        )
+        accesos_csv = _csv_bytes(
+            ["id", "vehicle_id", "patente", "user_id", "usuario", "email", "created_at"],
+            (
+                [
+                    access.id,
+                    access.vehicle_id,
+                    access.vehicle.plate,
+                    access.user_id,
+                    access.user.username,
+                    access.user.email,
+                    access.created_at,
+                ]
+                for access in VehicleAccess.objects.select_related("vehicle", "user").order_by(
+                    "vehicle__plate", "user__username"
+                )
+            ),
+        )
+        documentos_csv = _csv_bytes(
+            [
+                "id",
+                "vehicle_id",
+                "patente",
+                "tipo",
+                "archivo",
+                "emitido",
+                "vence",
+                "estado",
+                "notas",
+                "uploaded_by_id",
+                "uploaded_by",
+                "created_at",
+            ],
+            (
+                [
+                    document.id,
+                    document.vehicle_id,
+                    document.vehicle.plate,
+                    document.get_document_type_display(),
+                    document.file.name,
+                    document.issued_at,
+                    document.expires_at,
+                    document.status_label,
+                    document.notes,
+                    document.uploaded_by_id,
+                    document.uploaded_by.username if document.uploaded_by else "",
+                    document.created_at,
+                ]
+                for document in VehicleDocument.objects.select_related(
+                    "vehicle", "uploaded_by"
+                ).order_by("vehicle__plate", "document_type")
+            ),
+        )
+        odometros_csv = _csv_bytes(
+            ["id", "vehicle_id", "patente", "fecha", "odometro", "origen", "notas", "created_by", "created_at"],
+            (
+                [
+                    reading.id,
+                    reading.vehicle_id,
+                    reading.vehicle.plate,
+                    reading.date,
+                    reading.odometer,
+                    reading.get_source_display(),
+                    reading.notes,
+                    reading.created_by.username if reading.created_by else "",
+                    reading.created_at,
+                ]
+                for reading in OdometerReading.objects.select_related(
+                    "vehicle", "created_by"
+                ).order_by("vehicle__plate", "-date")
+            ),
+        )
+        combustible_csv = _csv_bytes(
+            [
+                "id",
+                "vehicle_id",
+                "patente",
+                "fecha",
+                "odometro",
+                "litros",
+                "precio_litro",
+                "costo_total",
+                "notas",
+                "created_by",
+                "created_at",
+            ],
+            (
+                [
+                    entry.id,
+                    entry.vehicle_id,
+                    entry.vehicle.plate,
+                    entry.date,
+                    entry.odometer,
+                    entry.liters,
+                    entry.price_per_liter,
+                    entry.total_cost,
+                    entry.notes,
+                    entry.created_by.username if entry.created_by else "",
+                    entry.created_at,
+                ]
+                for entry in FuelEntry.objects.select_related("vehicle", "created_by").order_by(
+                    "vehicle__plate", "-date"
+                )
+            ),
+        )
+        programaciones_csv = _csv_bytes(
+            [
+                "id",
+                "vehicle_id",
+                "patente",
+                "nombre",
+                "vence_km",
+                "vence_fecha",
+                "estado",
+                "notas",
+                "created_at",
+                "updated_at",
+            ],
+            (
+                [
+                    schedule.id,
+                    schedule.vehicle_id,
+                    schedule.vehicle.plate,
+                    schedule.name,
+                    schedule.due_odometer,
+                    schedule.due_date,
+                    schedule.get_status_display(),
+                    schedule.notes,
+                    schedule.created_at,
+                    schedule.updated_at,
+                ]
+                for schedule in MaintenanceSchedule.objects.select_related("vehicle").order_by(
+                    "vehicle__plate", "status", "due_date"
+                )
+            ),
+        )
+        mantenciones_csv = _csv_bytes(
+            [
+                "id",
+                "vehicle_id",
+                "patente",
+                "schedule_id",
+                "nombre",
+                "fecha",
+                "odometro",
+                "costo",
+                "notas",
+                "created_by",
+                "created_at",
+            ],
+            (
+                [
+                    record.id,
+                    record.vehicle_id,
+                    record.vehicle.plate,
+                    record.schedule_id,
+                    record.name,
+                    record.date,
+                    record.odometer,
+                    record.cost,
+                    record.notes,
+                    record.created_by.username if record.created_by else "",
+                    record.created_at,
+                ]
+                for record in MaintenanceRecord.objects.select_related(
+                    "vehicle", "created_by"
+                ).order_by("vehicle__plate", "-date")
+            ),
+        )
+        alertas_csv = _csv_bytes(
+            [
+                "id",
+                "vehicle_id",
+                "patente",
+                "schedule_id",
+                "tipo",
+                "severidad",
+                "estado",
+                "umbral",
+                "mensaje",
+                "created_at",
+            ],
+            (
+                [
+                    alert.id,
+                    alert.vehicle_id,
+                    alert.vehicle.plate,
+                    alert.schedule_id,
+                    alert.get_kind_display(),
+                    alert.get_severity_display(),
+                    alert.get_status_display(),
+                    alert.threshold_value,
+                    alert.message,
+                    alert.created_at,
+                ]
+                for alert in MaintenanceAlert.objects.select_related(
+                    "vehicle", "schedule"
+                ).order_by("vehicle__plate", "-created_at")
+            ),
+        )
+        return _zip_response(
+            "exportacion_odo.zip",
+            [
+                ("vehiculos.csv", vehiculos_csv),
+                ("accesos.csv", accesos_csv),
+                ("documentos.csv", documentos_csv),
+                ("odometros.csv", odometros_csv),
+                ("combustible.csv", combustible_csv),
+                ("programaciones_mantencion.csv", programaciones_csv),
+                ("mantenciones_realizadas.csv", mantenciones_csv),
+                ("alertas.csv", alertas_csv),
+            ],
+        )
+
+    def _export_balance(self):
+        from balance.models import ConceptoGasto, GastoMensual
+        from balance.views import (
+            MONTHS,
+            automatic_expense_rows,
+            manual_expense_rows,
+            product_rows_for_year,
+        )
+
+        year = self._export_year()
+        product_rows = product_rows_for_year(year)
+        manual_rows = manual_expense_rows(year)
+        automatic_rows = automatic_expense_rows(year)
+
+        income_by_month = {month: 0 for month, _ in MONTHS}
+        product_count_by_month = {month: 0 for month, _ in MONTHS}
+        for row in product_rows:
+            for month, value in row["meses"].items():
+                income_by_month[month] += value["total"]
+                product_count_by_month[month] += value["cantidad"]
+
+        expenses_by_month = {month: 0 for month, _ in MONTHS}
+        for row in manual_rows + automatic_rows:
+            for item in row["meses"]:
+                expenses_by_month[item["numero"]] += item["monto"]
+
+        resumen_csv = _csv_bytes(
+            ["anio", "mes", "mes_nombre", "ingresos", "gastos", "resultado", "productos"],
+            (
+                [
+                    year,
+                    month,
+                    name,
+                    income_by_month[month],
+                    expenses_by_month[month],
+                    income_by_month[month] - expenses_by_month[month],
+                    product_count_by_month[month],
+                ]
+                for month, name in MONTHS
+            ),
+        )
+        product_headers = [
+            "anio",
+            "producto",
+            "cantidad_total",
+            "ingreso_total",
+            "precio_promedio",
+        ]
+        for month, name in MONTHS:
+            product_headers.extend([f"{month:02d}_{name}_cantidad", f"{month:02d}_{name}_ingreso"])
+        ingresos_csv = _csv_bytes(
+            product_headers,
+            (
+                [
+                    year,
+                    row["nombre"],
+                    row["cantidad_total"],
+                    row["ingreso_total"],
+                    row["precio_promedio"],
+                    *[
+                        value
+                        for month, _name in MONTHS
+                        for value in (
+                            row["meses"][month]["cantidad"],
+                            row["meses"][month]["total"],
+                        )
+                    ],
+                ]
+                for row in product_rows
+            ),
+        )
+        expense_headers = ["anio", "concepto", "origen", "total"]
+        for month, name in MONTHS:
+            expense_headers.append(f"{month:02d}_{name}")
+        gastos_rows = []
+        for row in manual_rows:
+            gastos_rows.append(
+                [
+                    year,
+                    row["concepto"].nombre,
+                    row["concepto"].get_origen_display(),
+                    row["total"],
+                    *[item["monto"] for item in row["meses"]],
+                ]
+            )
+        for row in automatic_rows:
+            gastos_rows.append(
+                [
+                    year,
+                    row["nombre"],
+                    "Automatico",
+                    row["total"],
+                    *[item["monto"] for item in row["meses"]],
+                ]
+            )
+        gastos_csv = _csv_bytes(expense_headers, gastos_rows)
+        conceptos_csv = _csv_bytes(
+            ["id", "nombre", "origen", "orden", "activo"],
+            (
+                [
+                    concepto.id,
+                    concepto.nombre,
+                    concepto.get_origen_display(),
+                    concepto.orden,
+                    concepto.activo,
+                ]
+                for concepto in ConceptoGasto.objects.order_by("orden", "nombre")
+            ),
+        )
+        gastos_detalle_csv = _csv_bytes(
+            [
+                "id",
+                "concepto_id",
+                "concepto",
+                "anio",
+                "mes",
+                "monto",
+                "observacion",
+                "updated_by_id",
+                "updated_by",
+                "created_at",
+                "updated_at",
+            ],
+            (
+                [
+                    gasto.id,
+                    gasto.concepto_id,
+                    gasto.concepto.nombre,
+                    gasto.anio,
+                    gasto.mes,
+                    gasto.monto,
+                    gasto.observacion,
+                    gasto.updated_by_id,
+                    gasto.updated_by.username if gasto.updated_by else "",
+                    gasto.created_at,
+                    gasto.updated_at,
+                ]
+                for gasto in GastoMensual.objects.select_related(
+                    "concepto", "updated_by"
+                ).order_by("-anio", "mes", "concepto__orden", "concepto__nombre")
+            ),
+        )
+        return _zip_response(
+            f"exportacion_balance_{year}.zip",
+            [
+                ("resumen_mensual.csv", resumen_csv),
+                ("ingresos_por_producto.csv", ingresos_csv),
+                ("gastos_por_concepto.csv", gastos_csv),
+                ("conceptos_gasto.csv", conceptos_csv),
+                ("gastos_manuales_detalle.csv", gastos_detalle_csv),
+            ],
+        )
+
+
 class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
     template_name = "core/fichas_manage.html"
 
@@ -656,15 +1420,18 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
         if editing_ficha is None and edit_id:
             editing_ficha = get_object_or_404(FichaAlumno, pk=edit_id)
         if form is None:
-            form = FichaAlumnoForm(instance=editing_ficha)
-        context["fichas"] = (
-            FichaAlumno.objects.select_related("inscripcion", "user")
-            .prefetch_related("movimientos")
-            .annotate(
-                total_movimientos=Sum("movimientos__monto"),
-                cantidad_movimientos=Count("movimientos", distinct=True),
-            )
+            if editing_ficha is not None:
+                form = FichaAlumnoForm(instance=editing_ficha)
+            else:
+                form = FichaAlumnoForm(
+                    initial={"numero_ficha": FichaAlumno.next_numero_ficha()}
+                )
+        context["next_numero_ficha"] = FichaAlumno.next_numero_ficha()
+        context["total_fichas"] = FichaAlumno.objects.count()
+        context["last_ficha"] = (
+            FichaAlumno.objects.filter(numero_ficha__isnull=False)
             .order_by("-numero_ficha")
+            .first()
         )
         context["inscripciones_sin_ficha"] = (
             Inscripcion.objects.filter(ficha_alumno__isnull=True)
@@ -711,7 +1478,6 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             return self.render_to_response(
                 self.get_context_data(form=form, editing_ficha=ficha)
             )
-
         ficha = form.save(commit=False)
         if inscripcion is not None:
             ficha.inscripcion = inscripcion
@@ -720,6 +1486,29 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
         FichaMovimiento.sync_pago_inicial(ficha)
         messages.success(request, f"Ficha {ficha.numero_ficha} guardada.")
         return redirect("core_web:fichas")
+
+
+class FichaAlumnoListView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
+    template_name = "core/fichas_list.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["fichas"] = (
+            FichaAlumno.objects.select_related("inscripcion", "user")
+            .prefetch_related("movimientos")
+            .annotate(
+                total_movimientos=Sum("movimientos__monto"),
+                cantidad_movimientos=Count("movimientos", distinct=True),
+            )
+            .order_by("-numero_ficha")
+        )
+        context["total_fichas"] = FichaAlumno.objects.count()
+        context["last_ficha"] = (
+            FichaAlumno.objects.filter(numero_ficha__isnull=False)
+            .order_by("-numero_ficha")
+            .first()
+        )
+        return context
 
 
 class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):

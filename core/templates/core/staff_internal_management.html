@@ -111,6 +111,14 @@
         background: #fff8e1;
         color: #7a5a00;
     }
+    .internal-menu-item.is-exportaciones {
+        border-left-color: #455a64;
+        background: #f8fafc;
+    }
+    .internal-menu-item.is-exportaciones .internal-menu-icon {
+        background: #eceff1;
+        color: #263238;
+    }
     .internal-menu-copy {
         display: grid;
         gap: 0.25rem;
@@ -210,6 +218,17 @@
             </span>
             <span class="internal-menu-action">Ver balance</span>
         </a>
+
+        {% if request.user.is_superuser %}
+            <a class="internal-menu-item is-exportaciones" href="{% url 'core_web:export-center' %}">
+                <span class="internal-menu-icon" aria-hidden="true">EX</span>
+                <span class="internal-menu-copy">
+                    <span class="internal-menu-title">Exportaciones</span>
+                    <span class="internal-menu-detail">Descargar respaldos CSV de fichas, gestion de alumnos, ODO y balance. Solo administrador dueno.</span>
+                </span>
+                <span class="internal-menu-action">Exportar</span>
+            </a>
+        {% endif %}
     </nav>
 </div>
 {% endblock %}

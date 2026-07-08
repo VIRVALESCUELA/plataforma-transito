@@ -43,109 +43,125 @@
     <h2 class="section-title">Programas destacados para todos los objetivos</h2>
     <p class="section-lead"></p>
     <div class="card-grid" style="margin-top: 1rem;">
-        <article class="card">
+        <article class="card course-card">
             <span class="chip">CURSO BASE MECÁNICO</span>
             <h3>RESERVA CONDUCCIÓN CON TEORÍA APROBADA</h3>
-            <p>
-               Dirigido a personas sin conocimientos previos, futuros conductores que deseen realizar un curso desde cero.
-               Incluye simulación de exámenes online por 30 días.
-               Prácticas de conducción de 45 minutos, que contemplan 12 sesiones controladas (Dos módulos por día consecutivo).
-               Horarios disponibles: 9:00, 10:30, 15:00 y 16:30.
-               Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal.
-            </p>
-            <img src="{% static 'core/clase1.png' %}" alt="Curso base mecánico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/clase1.png' %}" alt="Curso base mecánico">
             <p class="price">$ 175.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                   Dirigido a personas sin conocimientos previos, futuros conductores que deseen realizar un curso desde cero.
+                   Incluye simulación de exámenes online por 30 días.
+                   Prácticas de conducción de 45 minutos, que contemplan 12 sesiones controladas (Dos módulos por día consecutivo).
+                   Horarios disponibles: 9:00, 10:30, 15:00 y 16:30.
+                   Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20base%20mecanico">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: var(--virval-amber);">CURSO INTENSIVO</span>
             <h3>RESERVA CONDUCCIÓN INMEDIATAMENTE</h3>
-            <p>
-              Dirigido a estudiantes y trabajadores que disponen de horarios limitados para la conducción. Nuestro programa incluye: 8 prácticas controladas de 60 minutos, simulación de exámenes online por 30 días y 2 ensayos sicotécnicos tipo evaluación municipal.
-              Horarios de conducción disponibles: 12:00, 18:00 y 19:00. Curso personalizado para quienes buscan una experiencia eficiente.
-            </p>
-            <img src="{% static 'core/instruc.png' %}" alt="Instructor" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/instruc.png' %}" alt="Instructor">
             <p class="price">$ 195.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                  Dirigido a estudiantes y trabajadores que disponen de horarios limitados para la conducción. Nuestro programa incluye: 8 prácticas controladas de 60 minutos, simulación de exámenes online por 30 días y 2 ensayos sicotécnicos tipo evaluación municipal.
+                  Horarios de conducción disponibles: 12:00, 18:00 y 19:00. Curso personalizado para quienes buscan una experiencia eficiente.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20intensivo">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: #ffe0df;">CURSO RUSH</span>
             <h3>ALUMNOS CON CONDUCCIÓN AVANZADA</h3>
-            <p>
-                Incluye 10 prácticas controladas, distribuidas en dos módulos por día consecutivo.
-                Horarios disponibles: 9:00, 10:30, 15:00 y 16:30 hrs.
-
-                Programa enfocado en el repaso de conducción en pendiente, preparación para el examen práctico y práctica en ruta municipal de Peñalolén.
-
-                Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal y simulación de exámenes online por 30 días.
-
-            </p>
-            <img src="{% static 'core/refor2.png' %}" alt="Refuerzo de conducción" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/refor2.png' %}" alt="Refuerzo de conducción">
             <p class="price">$ 150.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                    Incluye 10 prácticas controladas, distribuidas en dos módulos por día consecutivo.
+                    Horarios disponibles: 9:00, 10:30, 15:00 y 16:30 hrs.
+                    Programa enfocado en el repaso de conducción en pendiente, preparación para el examen práctico y práctica en ruta municipal de Peñalolén.
+                    Además, incluye 2 ensayos sicotécnicos tipo evaluación municipal y simulación de exámenes online por 30 días.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20rush">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip">CURSO DOMICILIO</span>
             <h3>DIRIGIDO A PERSONAS SIN TIEMPO ENTRE SEMANA</h3>
-            <p>
-                Incluye 8 prácticas controladas.
-                Programa enfocado en clases personalizadas los días sábado y domingo, distribuidas en dos fines de semana, con sesiones de 2 horas por día.
-
-                Contempla ruta extensa y ensayo en ruta municipal de Peñalolén.
-
-                Además, incluye 2 ensayos sicotécnicos en sucursal y simulación de exámenes online por 30 días.
-            </p>
-            <img src="{% static 'core/mujerphotgtp.png' %}" alt="Curso a domicilio" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/mujerphotgtp.png' %}" alt="Curso a domicilio">
             <p class="price">$ 240.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                    Incluye 8 prácticas controladas.
+                    Programa enfocado en clases personalizadas los días sábado y domingo, distribuidas en dos fines de semana, con sesiones de 2 horas por día.
+                    Contempla ruta extensa y ensayo en ruta municipal de Peñalolén.
+                    Además, incluye 2 ensayos sicotécnicos en sucursal y simulación de exámenes online por 30 días.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20domicilio">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: var(--virval-amber);">TEÓRICO + SICOTÉCNICO</span>
             <h3>ALUMNOS CON CONDUCCIÓN TOTAL</h3>
-            <p> 
-                Programa enfocado en la formación teórica para la obtención de la licencia clase B, y  practicar los ejercicios sicotècnicos.
-                simulación de exámenes en plataforma online por 30 días, mas evaluación sicotecnica completa.
-            </p>
-            <img class="course-image course-image--teorico" src="{% static 'core/exa.png' %}" alt="Curso teórico clase B">
+            <img class="course-image course-image--teorico" src="{% static 'core/libro.png' %}" alt="Curso teórico clase B">
             <p class="price">$ 30.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                    Programa enfocado en la formación teórica para la obtención de la licencia clase B, y practicar los ejercicios sicotècnicos.
+                    Simulación de exámenes en plataforma online por 30 días, mas evaluación sicotecnica completa.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Curso%20teorico">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: #ffe0df;">ENSAYO SICOTÉCNICO</span>
             <h3>PARA RENOVACIÓN O APROBACIÓN B-C-A</h3>
-            <p>                
-                Clase práctica de psicotécnicos: sesión de 45 minutos donde aplicaremos técnicas de control y conocerás los principales tips para aprobar.
-                Incluye aplicación práctica de: Test de LAY, test de punteado y test de reacción.
-            </p>
-            <img src="{% static 'core/sico.png' %}" alt="Ensayo sicotécnico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/sico.png' %}" alt="Ensayo sicotécnico">
             <p class="price">$ 20.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                    Clase práctica de psicotécnicos: sesión de 45 minutos donde aplicaremos técnicas de control y conocerás los principales tips para aprobar.
+                    Incluye aplicación práctica de: Test de LAY, test de punteado y test de reacción.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Ensayo%20sicotecnico">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: #ffe0df;">HELP ME!</span>
             <h3>PARA PERSONAS CON LICENCIA</h3>
-            <p> 
-                Programa de acompañamiento en vehículo propio del alumno "Alumno con licencia"
-                o clase reforzamiento con auto de escuela, Enfocado en el refuerzo de la confianza en la vía.
-
-                Clases de 2 horas. 
-                Disponibilidad de acompañamiento los días sábados.
-            </p>
-            <img src="{% static 'core/imgsusto.png' %}" alt="Acompañamiento práctico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/imgsusto.png' %}" alt="Acompañamiento práctico">
             <p class="price">$ 50.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                    Programa de acompañamiento en vehículo propio del alumno "Alumno con licencia"
+                    o clase reforzamiento con auto de escuela, enfocado en el refuerzo de la confianza en la vía.
+                    Clases de 2 horas. Disponibilidad de acompañamiento los días sábados.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Help%20me%21">Tomar curso</a>
         </article>
-        <article class="card">
+        <article class="card course-card">
             <span class="chip" style="background: var(--virval-amber);">QUITANDO EL MIEDO</span>
             <h3>SIMULADOR PRACTICO CLASE B </h3>
-            <p>
-               Clase personalizada en auto práctico con simulador clase B.
-               Programa enfocado en reforzar la confianza, mejorar la coordinación y el control de los comandos de un vehículo mecánico, además de mecanizar procesos de conducción.
-
-               Duración de la clase: 60 minutos.
-            </p>
-            <img src="{% static 'core/fotosimulador.png' %}" alt="Acompañamiento práctico" style="width: 100%; border-radius: 12px; margin: 0.5rem 0 0.75rem;">
+            <img class="course-image" src="{% static 'core/fotosimulador.png' %}" alt="Acompañamiento práctico">
             <p class="price">$ 20.000</p>
+            <details class="course-details">
+                <summary>Más info</summary>
+                <p>
+                   Clase personalizada en auto práctico con simulador clase B.
+                   Programa enfocado en reforzar la confianza, mejorar la coordinación y el control de los comandos de un vehículo mecánico, además de mecanizar procesos de conducción.
+                   Duración de la clase: 60 minutos.
+                </p>
+            </details>
             <a class="btn-primary" href="{% url 'core_web:inscripcion' %}?curso=Full%20automatico">Tomar curso</a>
         </article>
 

@@ -61,6 +61,13 @@
         font-weight: 800;
         color: var(--brand-text);
     }
+    .ficha-header-actions {
+        display: flex;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 1rem;
+    }
     @media (max-width: 980px) {
         .ficha-form-grid {
             grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -89,6 +96,12 @@
     <p style="max-width: 780px;">
         El correo mantiene el acceso del alumno a la plataforma. La ficha es el correlativo interno para matricula, pagos y agendamiento practico.
     </p>
+    <div class="ficha-header-actions">
+        <a class="btn" href="{% url 'core_web:fichas-list' %}">Ver fichas existentes</a>
+        <span class="meta" style="color:#455a64;">
+            {{ total_fichas }} fichas registradas{% if last_ficha %}. Ultima ficha: {{ last_ficha.numero_ficha }}{% endif %}
+        </span>
+    </div>
 </section>
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
@@ -213,7 +226,7 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="create_from_inscripcion">
                                         <input type="hidden" name="inscripcion_id" value="{{ inscripcion.id }}">
-                                        <input name="numero_ficha" type="number" min="1" placeholder="Automatico" style="width:130px;">
+                                        <input name="numero_ficha" type="number" min="1" value="{{ next_numero_ficha }}" placeholder="Automatico" style="width:130px;">
                                         <input name="fecha_inscripcion" type="hidden" value="{{ inscripcion.created_at|date:'Y-m-d' }}">
                                         <input name="nombre" type="hidden" value="{{ inscripcion.nombre }}">
                                         <input name="correo" type="hidden" value="{{ inscripcion.correo }}">
@@ -234,75 +247,4 @@
     </article>
 </section>
 
-<section class="dashboard-section" style="margin-top: 1.5rem;">
-    <article class="card">
-        <h2 style="margin-top:0;">Fichas existentes</h2>
-        {% if fichas %}
-            <div class="sticky-table-wrap">
-                <table class="sticky-header-table">
-                    <thead>
-                        <tr>
-                            <th>Ficha</th>
-                            <th>Alumno</th>
-                            <th>Rut / edad</th>
-                            <th>Curso</th>
-                            <th>Cupo practico</th>
-                            <th>Pago</th>
-                            <th>Origen</th>
-                            <th>Accion</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ficha in fichas %}
-                            <tr>
-                                <td><strong>{{ ficha.numero_ficha }}</strong></td>
-                                <td>
-                                    {{ ficha.nombre }}<br>
-                                    <span class="meta" style="color:#455a64;">{{ ficha.correo|default:"Sin correo" }}</span>
-                                    {% if ficha.direccion %}
-                                        <br><span class="meta" style="color:#455a64;">{{ ficha.direccion }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {{ ficha.rut|default:"Sin rut" }}<br>
-                                    <span class="meta" style="color:#455a64;">
-                                        {% if ficha.edad %}{{ ficha.edad }} años{% else %}Edad pendiente{% endif %}
-                                    </span>
-                                </td>
-                                <td>{{ ficha.curso|default:"Sin curso" }}</td>
-                                <td>
-                                    {{ ficha.cupo_clases_practicas }} clases<br>
-                                    <span class="meta" style="color:#455a64;">
-                                        {{ ficha.clases_contratadas }} base + {{ ficha.clases_extra_vendidas }} extra
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="ficha-total">${{ ficha.total_movimientos|default_if_none:ficha.valor_pagado }}</span><br>
-                                    <span class="meta" style="color:#455a64;">
-                                        {% if ficha.cantidad_movimientos %}{{ ficha.cantidad_movimientos }} movimientos{% else %}Pago inicial{% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if ficha.inscripcion %}
-                                        Inscripcion #{{ ficha.inscripcion.id }}
-                                    {% else %}
-                                        Manual
-                                    {% endif %}
-                                    {% if ficha.user %}
-                                        <br><span class="meta" style="color:#2e7d32;">Cuenta enlazada</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a class="btn btn-outline" href="{% url 'core_web:fichas' %}?edit={{ ficha.id }}">Editar</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <p>Aun no hay fichas creadas.</p>
-        {% endif %}
-    </article>
-</section>
 {% endblock %}

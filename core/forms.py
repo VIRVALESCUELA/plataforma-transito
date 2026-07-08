@@ -258,7 +258,10 @@ class FichaAlumnoForm(forms.ModelForm):
         ]
         widgets = {
             "numero_ficha": forms.NumberInput(attrs={"min": 1, "placeholder": "Automatico"}),
-            "fecha_inscripcion": forms.DateInput(attrs={"type": "date"}),
+            "fecha_inscripcion": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "correo": forms.EmailInput(attrs={"placeholder": "alumno@email.cl"}),
             "direccion": forms.TextInput(attrs={"placeholder": "Direccion del alumno"}),
             "telefono": forms.TextInput(
@@ -272,7 +275,10 @@ class FichaAlumnoForm(forms.ModelForm):
                     "title": "Formato esperado: +56 9 1234 5678",
                 }
             ),
-            "fecha_nacimiento": forms.DateInput(attrs={"type": "date"}),
+            "fecha_nacimiento": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "clases_contratadas": forms.NumberInput(
                 attrs={"min": 0, "placeholder": "Ej: 12"}
             ),
@@ -309,7 +315,10 @@ class FichaMovimientoForm(forms.ModelForm):
         model = FichaMovimiento
         fields = ["fecha", "concepto", "monto", "forma_pago", "observaciones"]
         widgets = {
-            "fecha": forms.DateInput(attrs={"type": "date"}),
+            "fecha": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "monto": forms.NumberInput(attrs={"min": 0, "placeholder": "0"}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }

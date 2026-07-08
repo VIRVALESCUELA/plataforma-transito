@@ -1,6 +1,8 @@
 import csv
 import tempfile
-from datetime import timedelta
+from datetime import date, timedelta
+from io import BytesIO
+from zipfile import ZipFile
 
 from django.core.management import call_command
 from django.core import mail
@@ -1293,6 +1295,159 @@ class InscripcionManagementTests(TestCase):
         self.assertContains(management_response, "Auditar alumnos")
         self.assertContains(management_response, "Crear codigos libres")
 
+    def test_export_center_is_only_for_superuser(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("core_web:export-center"))
+
+        self.assertRedirects(response, reverse("core_web:dashboard"))
+
+        superuser = get_user_model().objects.create_superuser(
+            username="owner",
+            email="owner@example.com",
+            password="strong-pass-123",
+        )
+        self.client.force_login(superuser)
+        response = self.client.get(reverse("core_web:internal-management"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("core_web:export-center"))
+
+        response = self.client.get(reverse("core_web:export-center"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Exportaciones")
+        self.assertContains(response, reverse("core_web:export-download", args=["fichas"]))
+        self.assertContains(response, reverse("core_web:export-download", args=["gestion"]))
+        self.assertContains(response, reverse("core_web:export-download", args=["odo"]))
+        self.assertContains(response, reverse("core_web:export-download", args=["balance"]))
+
+    def test_superuser_can_export_fichas_zip(self):
+        superuser = get_user_model().objects.create_superuser(
+            username="owner-export",
+            email="owner-export@example.com",
+            password="strong-pass-123",
+        )
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5199,
+            nombre="Alumno exportado",
+            correo="exportado@example.com",
+            curso="Curso intensivo",
+            valor_pagado=120000,
+        )
+        FichaMovimiento.sync_pago_inicial(ficha)
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse("core_web:export-download", args=["fichas"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertEqual(
+                set(archive.namelist()),
+                {"fichas.csv", "movimientos_fichas.csv"},
+            )
+            fichas_csv = archive.read("fichas.csv").decode("utf-8-sig")
+            movimientos_csv = archive.read("movimientos_fichas.csv").decode("utf-8-sig")
+        self.assertIn("Alumno exportado", fichas_csv)
+        self.assertIn("exportado@example.com", fichas_csv)
+        self.assertIn("Curso intensivo", movimientos_csv)
+
+    def test_superuser_can_export_gestion_zip(self):
+        superuser = get_user_model().objects.create_superuser(
+            username="owner-gestion",
+            email="owner-gestion@example.com",
+            password="strong-pass-123",
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse("core_web:export-download", args=["gestion"]))
+
+        self.assertEqual(response.status_code, 200)
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertEqual(
+                set(archive.namelist()),
+                {
+                    "alumnos.csv",
+                    "inscripciones.csv",
+                    "codigos_activacion.csv",
+                    "intentos_examen.csv",
+                },
+            )
+            inscripciones_csv = archive.read("inscripciones.csv").decode("utf-8-sig")
+            codigos_csv = archive.read("codigos_activacion.csv").decode("utf-8-sig")
+        self.assertIn("Alumno Sucursal", inscripciones_csv)
+        self.assertIn("CLASEB-LIBRE1", codigos_csv)
+
+    def test_superuser_can_export_odo_zip(self):
+        from odo.models import Vehicle
+
+        superuser = get_user_model().objects.create_superuser(
+            username="owner-odo",
+            email="owner-odo@example.com",
+            password="strong-pass-123",
+        )
+        Vehicle.objects.create(
+            owner=superuser,
+            plate="ABCD12",
+            alias="Auto escuela",
+            current_odometer=12345,
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse("core_web:export-download", args=["odo"]))
+
+        self.assertEqual(response.status_code, 200)
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertIn("vehiculos.csv", archive.namelist())
+            vehicles_csv = archive.read("vehiculos.csv").decode("utf-8-sig")
+        self.assertIn("ABCD12", vehicles_csv)
+        self.assertIn("Auto escuela", vehicles_csv)
+
+    def test_superuser_can_export_balance_zip(self):
+        from balance.models import ConceptoGasto, GastoMensual
+
+        superuser = get_user_model().objects.create_superuser(
+            username="owner-balance",
+            email="owner-balance@example.com",
+            password="strong-pass-123",
+        )
+        FichaAlumno.objects.create(
+            numero_ficha=5201,
+            fecha_inscripcion=date(2026, 1, 10),
+            nombre="Alumno balance",
+            curso="Curso intensivo",
+            valor_pagado=180000,
+        )
+        concepto = ConceptoGasto.objects.create(nombre="Arriendo export", orden=1)
+        GastoMensual.objects.create(
+            concepto=concepto,
+            anio=2026,
+            mes=1,
+            monto=500000,
+            updated_by=superuser,
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.get(
+            reverse("core_web:export-download", args=["balance"]) + "?anio=2026"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertEqual(
+                set(archive.namelist()),
+                {
+                    "resumen_mensual.csv",
+                    "ingresos_por_producto.csv",
+                    "gastos_por_concepto.csv",
+                    "conceptos_gasto.csv",
+                    "gastos_manuales_detalle.csv",
+                },
+            )
+            resumen_csv = archive.read("resumen_mensual.csv").decode("utf-8-sig")
+            gastos_csv = archive.read("gastos_por_concepto.csv").decode("utf-8-sig")
+        self.assertIn("180000", resumen_csv)
+        self.assertIn("Arriendo export", gastos_csv)
+
     def test_staff_can_view_student_audit_list_and_profile(self):
         self.client.force_login(self.staff)
 
@@ -1340,6 +1495,16 @@ class InscripcionManagementTests(TestCase):
         self.assertEqual(movimiento.concepto, self.inscripcion.curso)
         self.assertEqual(movimiento.monto, 120000)
 
+    def test_ficha_create_form_shows_next_correlative_number(self):
+        FichaAlumno.objects.create(numero_ficha=1, nombre="Alumno uno")
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("core_web:fichas"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="numero_ficha"')
+        self.assertContains(response, 'value="2"')
+
     def test_staff_can_edit_existing_ficha(self):
         ficha = FichaAlumno.objects.create(
             numero_ficha=5177,
@@ -1347,6 +1512,8 @@ class InscripcionManagementTests(TestCase):
             correo="mal@example.com",
             telefono="+56 9 1111 2222",
             curso="Curso intensivo",
+            fecha_inscripcion=date(2026, 6, 1),
+            fecha_nacimiento=date(2000, 6, 1),
         )
         self.client.force_login(self.staff)
 
@@ -1354,6 +1521,8 @@ class InscripcionManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Editar ficha 5177")
+        self.assertContains(response, 'value="2026-06-01"')
+        self.assertContains(response, 'value="2000-06-01"')
 
         response = self.client.post(
             reverse("core_web:fichas"),
@@ -1382,6 +1551,37 @@ class InscripcionManagementTests(TestCase):
         movimiento = ficha.movimientos.get()
         self.assertEqual(movimiento.concepto, "Curso intensivo")
         self.assertEqual(movimiento.monto, 130000)
+
+    def test_staff_can_view_complete_fichas_list(self):
+        ficha = FichaAlumno.objects.create(
+            numero_ficha=5188,
+            fecha_inscripcion=date(2026, 6, 3),
+            nombre="Alumno listado",
+            correo="listado@example.com",
+            telefono="+56 9 9999 8888",
+            direccion="Av. Completa 456",
+            curso="Curso intensivo",
+            rut="11.111.111-1",
+            fecha_nacimiento=date(1999, 5, 4),
+            valor_pagado=150000,
+            forma_pago="TRANSFERENCIA",
+            observaciones="Ficha completa",
+        )
+        FichaMovimiento.sync_pago_inicial(ficha)
+        self.client.force_login(self.staff)
+
+        management_response = self.client.get(reverse("core_web:fichas"))
+        self.assertContains(management_response, reverse("core_web:fichas-list"))
+
+        response = self.client.get(reverse("core_web:fichas-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ficha 5188")
+        self.assertContains(response, "listado@example.com")
+        self.assertContains(response, "Av. Completa 456")
+        self.assertContains(response, "Ficha completa")
+        self.assertContains(response, "Curso intensivo")
+        self.assertContains(response, "Editar ficha")
 
     def test_staff_can_add_movimiento_to_existing_ficha(self):
         ficha = FichaAlumno.objects.create(
