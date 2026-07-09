@@ -170,9 +170,9 @@
     }
     .schedule-modal {
         border: 0;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 0;
-        width: min(460px, calc(100vw - 2rem));
+        width: min(380px, calc(100vw - 1rem));
         box-shadow: 0 28px 80px rgba(0,0,0,0.24);
     }
     .schedule-modal::backdrop {
@@ -180,8 +180,8 @@
     }
     .schedule-modal form {
         display: grid;
-        gap: 0.75rem;
-        padding: 1.25rem;
+        gap: 0.6rem;
+        padding: 0.85rem;
     }
     .schedule-modal header {
         display: flex;
@@ -191,39 +191,81 @@
     }
     .schedule-modal h2 {
         margin: 0;
-        font-size: 1.15rem;
+        font-size: 0.98rem;
+        line-height: 1.2;
     }
     .schedule-modal label {
         display: grid;
-        gap: 0.3rem;
+        gap: 0.22rem;
         font-weight: 800;
+        font-size: 0.78rem;
     }
     .schedule-modal input,
     .schedule-modal select,
     .schedule-modal textarea {
-        min-height: 40px;
-        padding: 0.45rem 0.65rem;
+        min-height: 34px;
+        padding: 0.32rem 0.5rem;
+        font-size: 0.86rem;
     }
     .schedule-modal textarea {
-        min-height: 82px;
+        width: 100%;
+        min-height: 58px;
         resize: vertical;
+        box-sizing: border-box;
     }
     .schedule-modal menu {
         display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end;
+        gap: 0.35rem;
+        justify-content: flex-start;
         flex-wrap: wrap;
         margin: 0;
         padding: 0;
     }
+    .schedule-modal .modal-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 96px;
+        gap: 0.55rem;
+        align-items: end;
+    }
+    .schedule-modal .modal-grid-compact {
+        grid-template-columns: 96px minmax(0, 1fr);
+    }
+    .schedule-modal .ficha-input {
+        width: 7ch;
+        max-width: 100%;
+    }
+    .schedule-modal .lesson-input {
+        width: 5ch;
+        max-width: 100%;
+    }
+    .schedule-modal .modal-action-btn {
+        min-height: 30px;
+        padding: 0.34rem 0.55rem;
+        border-radius: 8px;
+        font-size: 0.74rem;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .schedule-modal header .btn {
+        min-height: 30px;
+        padding: 0.35rem 0.55rem;
+        border-radius: 8px;
+        font-size: 0.76rem;
+    }
     .btn-danger {
         background: #c62828;
+    }
+    @media (max-width: 420px) {
+        .schedule-modal .modal-grid,
+        .schedule-modal .modal-grid-compact {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
 <section class="card">
     <h1 style="margin-top: 0;">
-        {% if is_minimal_view %}Agendamiento 15 dias{% else %}Agendamiento de clases{% endif %}
+        Agendamiento de clases
     </h1>
 
     <form class="schedule-toolbar" method="get">
@@ -231,26 +273,16 @@
             Desde
             <input type="date" name="start" value="{{ start_date|date:'Y-m-d' }}">
         </label>
-        {% if is_minimal_view %}
-            <input type="hidden" name="days" value="15">
-        {% else %}
-            <label>
-                Dias
-                <select name="days">
-                    {% for option in day_options %}
-                        <option value="{{ option }}" {% if option == day_count %}selected{% endif %}>{{ option }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-        {% endif %}
+        <label>
+            Dias
+            <select name="days">
+                {% for option in day_options %}
+                    <option value="{{ option }}" {% if option == day_count %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
         <button class="btn" type="submit">Ver rango</button>
-        {% if is_minimal_view %}
-            <a class="btn btn-outline" href="{% url 'agendamiento:minimal' %}">Hoy</a>
-            <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}?start={{ start_date|date:'Y-m-d' }}&days=60">Vista completa</a>
-        {% else %}
-            <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}">Hoy</a>
-            <a class="btn btn-outline" href="{% url 'agendamiento:minimal' %}?start={{ start_date|date:'Y-m-d' }}">Vista 15 dias</a>
-        {% endif %}
+        <a class="btn btn-outline" href="{% url 'agendamiento:grid' %}">Hoy</a>
         <a class="btn btn-outline" href="{% url 'agendamiento:search' %}">Buscar clases</a>
         <a class="btn btn-outline" href="{% url 'agendamiento:resources' %}">Gestionar instructores/autos</a>
     </form>
@@ -354,43 +386,46 @@
             <h2 id="modal-title">Agendar clase</h2>
             <button class="btn btn-outline" type="button" data-close-modal>Cerrar</button>
         </header>
-        <label>
-            Ficha existente
-            <select id="modal-ficha-alumno" name="ficha_alumno">
-                <option value="">Ingreso manual</option>
-                {% for ficha in fichas %}
-                    <option value="{{ ficha.id }}" data-numero="{{ ficha.numero_ficha }}">
-                        {{ ficha.numero_ficha }} - {{ ficha.nombre }}
-                    </option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>
-            Ficha
-            <input id="modal-ficha" type="number" min="1" name="ficha" placeholder="5176">
-        </label>
-        <label>
-            Clase
-            <input id="modal-lesson" type="number" min="1" name="lesson_number" placeholder="1">
-        </label>
-        <label>
-            Estado
-            <select id="modal-status" name="status">
-                {% for value, label in status_choices %}
-                    <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-            </select>
-        </label>
+        <div class="modal-grid">
+            <label>
+                Ficha existente
+                <select id="modal-ficha-alumno" name="ficha_alumno">
+                    <option value="">Ingreso manual</option>
+                    {% for ficha in fichas %}
+                        <option value="{{ ficha.id }}" data-numero="{{ ficha.numero_ficha }}">
+                            {{ ficha.numero_ficha }} - {{ ficha.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                Nro ficha
+                <input class="ficha-input" id="modal-ficha" type="number" min="1" max="999999" name="ficha" placeholder="5176" inputmode="numeric">
+            </label>
+        </div>
+        <div class="modal-grid modal-grid-compact">
+            <label>
+                Clase
+                <input class="lesson-input" id="modal-lesson" type="number" min="1" name="lesson_number" placeholder="1" inputmode="numeric">
+            </label>
+            <label>
+                Estado
+                <select id="modal-status" name="status">
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
         <label>
             Comentario
             <textarea id="modal-notes" name="notes" maxlength="240" placeholder="Opcional"></textarea>
         </label>
         <menu>
-            <button class="btn" type="submit" data-submit-action="save_lesson">Guardar clase</button>
-            <button class="btn btn-outline" type="submit" data-submit-action="update_comment">Guardar comentario</button>
-            <button class="btn btn-outline" type="submit" data-submit-action="block_slot">Bloquear horario</button>
-            <button class="btn btn-danger" type="submit" data-submit-action="delete_lesson">Liberar clase</button>
-            <button class="btn btn-outline" type="submit" data-submit-action="unblock">Quitar bloqueo</button>
+            <button class="btn modal-action-btn" type="submit" data-submit-action="save_lesson">Guardar</button>
+            <button class="btn btn-outline modal-action-btn" type="submit" data-submit-action="block_slot">Bloquear</button>
+            <button class="btn btn-danger modal-action-btn" type="submit" data-submit-action="delete_lesson">Liberar</button>
+            <button class="btn btn-outline modal-action-btn" type="submit" data-submit-action="unblock">Quitar bloqueo</button>
         </menu>
     </form>
 </dialog>

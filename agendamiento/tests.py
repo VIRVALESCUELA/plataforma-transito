@@ -45,14 +45,24 @@ class ScheduleGridTests(TestCase):
         self.assertContains(response, "19:00")
         self.assertNotContains(response, "19:00-20:00")
 
-    def test_staff_can_view_minimal_15_day_grid(self):
+    def test_staff_grid_defaults_to_15_days(self):
         self.client.force_login(self.staff)
 
-        response = self.client.get(reverse("agendamiento:minimal") + "?start=2026-06-01")
+        response = self.client.get(reverse("agendamiento:grid") + "?start=2026-06-01")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Agendamiento 15 dias")
-        self.assertContains(response, "Vista completa")
+        self.assertEqual(response.context["day_count"], 15)
+        self.assertEqual(len(response.context["schedules"][0]["rows"]), 15)
+
+    def test_staff_can_view_15_day_grid_from_range_selector(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("agendamiento:grid") + "?start=2026-06-01&days=15")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Agendamiento de clases")
+        self.assertNotContains(response, "Vista completa")
+        self.assertNotContains(response, "Vista 15 dias")
         self.assertEqual(len(response.context["schedules"][0]["rows"]), 15)
 
     def test_staff_can_search_past_lesson_by_ficha(self):

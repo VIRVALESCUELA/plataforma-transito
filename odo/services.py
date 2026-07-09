@@ -16,8 +16,8 @@ from .models import (
 
 ODOMETER_THRESHOLDS = [500, 400, 300, 200, 100]
 DATE_THRESHOLDS = [5, 4, 3, 2, 1]
-EMAIL_ODOMETER_THRESHOLDS = {300, 100}
-EMAIL_DATE_THRESHOLDS = {5, 1}
+EMAIL_ODOMETER_THRESHOLDS = set(ODOMETER_THRESHOLDS)
+EMAIL_DATE_THRESHOLDS = set(DATE_THRESHOLDS)
 ODO_ALERT_NOTIFICATION_EMAIL = "virvalescuela@gmail.com"
 logger = logging.getLogger(__name__)
 
@@ -120,17 +120,18 @@ def _evaluate_odometer_alerts(schedule, *, current_odometer, previous_odometer=N
         elif previous_remaining > threshold >= current_remaining:
             crossed_thresholds.append(threshold)
 
-    alerts = [
-        _create_alert(
-            schedule,
-            kind=MaintenanceAlertKind.ODOMETER,
-            severity=MaintenanceAlertSeverity.WARNING,
-            threshold_value=threshold,
-            message=f"{schedule.name} vence en {threshold} km.",
-        )
-        for threshold in crossed_thresholds
-    ]
-    return [alert for alert in alerts if alert is not None]
+    if not crossed_thresholds:
+        return []
+
+    threshold = min(crossed_thresholds)
+    alert = _create_alert(
+        schedule,
+        kind=MaintenanceAlertKind.ODOMETER,
+        severity=MaintenanceAlertSeverity.WARNING,
+        threshold_value=threshold,
+        message=f"{schedule.name} vence en {threshold} km.",
+    )
+    return [alert] if alert is not None else []
 
 
 def _evaluate_date_alerts(schedule, *, current_date=None):
@@ -220,10 +221,12 @@ def _notify_alert_by_email(alert):
     )
     vehicle = alert.vehicle
     schedule = alert.schedule
-    subject = f"ODO alerta {vehicle.plate}: {schedule.name}"
+    urgency_label = _alert_urgency_label(alert)
+    subject = f"ODO {urgency_label} {vehicle.plate}: {schedule.name}"
     body_lines = [
         alert.message,
         "",
+        f"Prioridad: {urgency_label}",
         f"Patente: {vehicle.plate}",
         f"Kilometraje actual: {vehicle.current_odometer} km",
         f"Vence en km: {schedule.due_odometer or 'No definido'}",
@@ -247,3 +250,13 @@ def _notify_alert_by_email(alert):
             alert.pk,
             vehicle.plate,
         )
+
+
+def _alert_urgency_label(alert):
+    if alert.severity == MaintenanceAlertSeverity.CRITICAL:
+        return "VENCIDO"
+    if alert.threshold_value in {1, 100}:
+        return "URGENTE"
+    if alert.threshold_value in {2, 3, 200, 300}:
+        return "ATENCION"
+    return "PREVENTIVO"

@@ -27,6 +27,10 @@ from .slots import FRIDAY_WORK_BLOCKED_SLOT_KEYS, SCHEDULE_SLOTS, SLOT_BY_KEY
 from core.models import FichaAlumno
 
 
+DEFAULT_DAY_RANGE = 15
+DAY_RANGE_OPTIONS = [DEFAULT_DAY_RANGE, 30, 60, 90, 120, 180]
+
+
 class StaffRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         return bool(self.request.user and self.request.user.is_staff)
@@ -55,21 +59,21 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
             return date.today()
 
     def _parse_day_count(self):
-        raw = self.request.GET.get("days", "60")
+        raw = self.request.GET.get("days", str(DEFAULT_DAY_RANGE))
         try:
             days = int(raw)
         except ValueError:
-            days = 60
+            days = DEFAULT_DAY_RANGE
         return min(180, max(7, days))
 
     def _redirect_to_current_range(self):
         start = self.request.POST.get("start") or self.request.GET.get("start") or date.today().isoformat()
-        days = self.request.POST.get("days") or self.request.GET.get("days") or "60"
+        days = self.request.POST.get("days") or self.request.GET.get("days") or str(DEFAULT_DAY_RANGE)
         return redirect(f"{self.request.path}?start={start}&days={days}")
 
     def _redirect_to_search_ficha(self, ficha):
         start = self.request.POST.get("start") or self.request.GET.get("start") or date.today().isoformat()
-        days = self.request.POST.get("days") or self.request.GET.get("days") or "60"
+        days = self.request.POST.get("days") or self.request.GET.get("days") or str(DEFAULT_DAY_RANGE)
         return redirect(f"{reverse_lazy('agendamiento:search')}?start={start}&days={days}&search_ficha={ficha}")
 
     def _active_resources(self):
@@ -352,7 +356,7 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
                 "start_date": start_date,
                 "day_count": day_count,
                 "status_choices": LessonStatus.choices,
-                "day_options": [30, 60, 90, 120, 180],
+                "day_options": DAY_RANGE_OPTIONS,
                 "fichas": FichaAlumno.objects.order_by("-numero_ficha")[:500],
             }
         )
@@ -690,18 +694,9 @@ class ScheduleGridView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
 
 
 class ScheduleMinimalGridView(ScheduleGridView):
-    def _parse_day_count(self):
-        return 15
-
-    def _redirect_to_current_range(self):
-        start = self.request.POST.get("start") or self.request.GET.get("start") or date.today().isoformat()
-        return redirect(f"{self.request.path}?start={start}&days=15")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["is_minimal_view"] = True
-        context["day_options"] = [15]
-        return context
+    def get(self, request, *args, **kwargs):
+        start = request.GET.get("start") or date.today().isoformat()
+        return redirect(f"{reverse_lazy('agendamiento:grid')}?start={start}&days=15")
 
 
 class ScheduleSearchView(ScheduleGridView):
@@ -728,7 +723,7 @@ class ScheduleSearchView(ScheduleGridView):
                 "start_date": start_date,
                 "day_count": day_count,
                 "status_choices": LessonStatus.choices,
-                "day_options": [30, 60, 90, 120, 180],
+                "day_options": DAY_RANGE_OPTIONS,
                 "search_ficha": search_ficha,
                 "search_date": self.request.GET.get("search_date", "").strip(),
                 "search_status": self.request.GET.get("search_status", "").strip(),

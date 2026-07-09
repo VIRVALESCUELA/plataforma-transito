@@ -68,9 +68,9 @@ class OdoAlertTests(TestCase):
             source=OdometerReadingSource.MANUAL,
         )
 
-        alert = schedule.alerts.get(threshold_value=500)
+        alert = schedule.alerts.get(threshold_value=400)
         self.assertEqual(alert.severity, MaintenanceAlertSeverity.WARNING)
-        self.assertEqual(alert.message, "Cambio de aceite vence en 500 km.")
+        self.assertEqual(alert.message, "Cambio de aceite vence en 400 km.")
 
     def test_marks_schedule_overdue_when_odometer_is_exceeded(self):
         schedule = MaintenanceSchedule.objects.create(
@@ -114,7 +114,7 @@ class OdoAlertTests(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["virvalescuela@gmail.com"])
-        self.assertIn("ODO alerta ODO123: Aceite motor", mail.outbox[0].subject)
+        self.assertIn("ODO VENCIDO ODO123: Aceite motor", mail.outbox[0].subject)
         self.assertIn("Aviso de vencimiento", mail.outbox[0].body)
 
     @override_settings(
@@ -169,11 +169,11 @@ class OdoAlertTests(TestCase):
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
         ODO_ALERT_NOTIFICATION_EMAIL="virvalescuela@gmail.com",
     )
-    def test_skips_email_for_non_selected_odometer_warning_thresholds(self):
+    def test_sends_email_for_500_km_warning_threshold(self):
         MaintenanceSchedule.objects.create(
             vehicle=self.vehicle,
             name="Aceite motor",
-            due_odometer=10000,
+            due_odometer=9500,
         )
 
         with self.captureOnCommitCallbacks(execute=True):
@@ -183,7 +183,9 @@ class OdoAlertTests(TestCase):
                 source=OdometerReadingSource.MANUAL,
             )
 
-        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("ODO PREVENTIVO ODO123: Aceite motor", mail.outbox[0].subject)
+        self.assertIn("Aceite motor vence en 500 km.", mail.outbox[0].body)
 
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
@@ -208,6 +210,29 @@ class OdoAlertTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Revision tecnica vence en 5 dias.", mail.outbox[0].body)
         self.assertIn("Pedir hora en planta.", mail.outbox[0].body)
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        ODO_ALERT_NOTIFICATION_EMAIL="virvalescuela@gmail.com",
+    )
+    def test_sends_email_for_4_day_warning_threshold(self):
+        MaintenanceSchedule.objects.create(
+            vehicle=self.vehicle,
+            name="Permiso circulacion",
+            due_date=date(2026, 6, 16),
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            record_odometer(
+                self.vehicle,
+                odometer=9100,
+                source=OdometerReadingSource.MANUAL,
+                date=date(2026, 6, 12),
+            )
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("ODO PREVENTIVO ODO123: Permiso circulacion", mail.outbox[0].subject)
+        self.assertIn("Permiso circulacion vence en 4 dias.", mail.outbox[0].body)
 
 
 class OdoFuelEntrySerializerTests(TestCase):
