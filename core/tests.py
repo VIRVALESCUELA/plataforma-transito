@@ -1583,6 +1583,62 @@ class InscripcionManagementTests(TestCase):
         self.assertContains(response, "Curso intensivo")
         self.assertContains(response, "Editar ficha")
 
+    def test_staff_can_search_fichas_list_by_text_fields(self):
+        FichaAlumno.objects.create(
+            numero_ficha=5201,
+            nombre="Rush Alumno",
+            correo="rush@example.com",
+            telefono="+56 9 1111 2222",
+            rut="11.111.111-1",
+            curso="Curso profesional",
+        )
+        FichaAlumno.objects.create(
+            numero_ficha=5202,
+            nombre="Alumno oculto",
+            correo="oculto@example.com",
+            telefono="+56 9 3333 4444",
+            rut="22.222.222-2",
+            curso="Curso base",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("core_web:fichas-list"), {"q": "rush"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="rush"')
+        self.assertContains(response, "1 resultado para")
+        self.assertContains(response, "Ficha 5201")
+        self.assertNotContains(response, "Ficha 5202")
+
+        rut_response = self.client.get(
+            reverse("core_web:fichas-list"), {"q": "11.111.111"}
+        )
+
+        self.assertContains(rut_response, "Ficha 5201")
+        self.assertNotContains(rut_response, "Ficha 5202")
+
+    def test_staff_can_search_fichas_list_by_numero_ficha(self):
+        FichaAlumno.objects.create(numero_ficha=5201, nombre="Ficha exacta")
+        FichaAlumno.objects.create(numero_ficha=5202, nombre="Otra ficha")
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("core_web:fichas-list"), {"q": "5201"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ficha 5201")
+        self.assertNotContains(response, "Ficha 5202")
+
+    def test_staff_sees_empty_search_message_on_fichas_list(self):
+        FichaAlumno.objects.create(numero_ficha=5201, nombre="Ficha existente")
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("core_web:fichas-list"), {"q": "sin-match"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '0 resultados para "sin-match"')
+        self.assertContains(response, 'No se encontraron fichas para "sin-match".')
+        self.assertNotContains(response, "Ficha 5201")
+
     def test_staff_can_add_movimiento_to_existing_ficha(self):
         ficha = FichaAlumno.objects.create(
             numero_ficha=5178,

@@ -1493,15 +1493,30 @@ class FichaAlumnoListView(PrivateAreaMixin, StaffRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["fichas"] = (
+        search_query = self.request.GET.get("q", "").strip()
+        fichas = (
             FichaAlumno.objects.select_related("inscripcion", "user")
             .prefetch_related("movimientos")
-            .annotate(
-                total_movimientos=Sum("movimientos__monto"),
-                cantidad_movimientos=Count("movimientos", distinct=True),
-            )
-            .order_by("-numero_ficha")
         )
+        if search_query:
+            search_filter = (
+                Q(nombre__icontains=search_query)
+                | Q(correo__icontains=search_query)
+                | Q(telefono__icontains=search_query)
+                | Q(direccion__icontains=search_query)
+                | Q(curso__icontains=search_query)
+                | Q(rut__icontains=search_query)
+                | Q(observaciones__icontains=search_query)
+            )
+            if search_query.isdigit():
+                search_filter |= Q(numero_ficha=int(search_query))
+            fichas = fichas.filter(search_filter)
+        context["fichas"] = fichas.annotate(
+            total_movimientos=Sum("movimientos__monto"),
+            cantidad_movimientos=Count("movimientos", distinct=True),
+        ).order_by("-numero_ficha")
+        context["search_query"] = search_query
+        context["filtered_fichas_count"] = fichas.count()
         context["total_fichas"] = FichaAlumno.objects.count()
         context["last_ficha"] = (
             FichaAlumno.objects.filter(numero_ficha__isnull=False)

@@ -13,6 +13,25 @@
         flex-wrap: wrap;
         align-items: center;
     }
+    .fichas-search-form {
+        display: flex;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 0.25rem;
+    }
+    .fichas-search-form input {
+        flex: 1 1 280px;
+        min-width: 0;
+        border: 1px solid rgba(15, 23, 42, 0.18);
+        border-radius: 8px;
+        padding: 0.78rem 0.9rem;
+        font: inherit;
+    }
+    .fichas-search-summary {
+        color: #455a64;
+        margin: 0;
+    }
     .ficha-detail-list {
         display: grid;
         gap: 1rem;
@@ -98,6 +117,24 @@
             {{ total_fichas }} fichas registradas{% if last_ficha %}. Ultima ficha: {{ last_ficha.numero_ficha }}{% endif %}
         </span>
     </div>
+    <form class="fichas-search-form" method="get" action="{% url 'core_web:fichas-list' %}">
+        <input
+            type="search"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Buscar por ficha, nombre, RUT, telefono, correo o curso"
+            aria-label="Buscar fichas"
+        >
+        <button class="btn" type="submit">Buscar</button>
+        {% if search_query %}
+            <a class="btn btn-outline" href="{% url 'core_web:fichas-list' %}">Limpiar</a>
+        {% endif %}
+    </form>
+    {% if search_query %}
+        <p class="fichas-search-summary">
+            {{ filtered_fichas_count }} resultado{% if filtered_fichas_count != 1 %}s{% endif %} para "{{ search_query }}".
+        </p>
+    {% endif %}
 </section>
 
 {% if fichas %}
@@ -217,7 +254,11 @@
     </section>
 {% else %}
     <section class="card" style="margin-top: 1.5rem;">
-        <p style="margin:0;">Aun no hay fichas creadas.</p>
+        {% if search_query %}
+            <p style="margin:0;">No se encontraron fichas para "{{ search_query }}".</p>
+        {% else %}
+            <p style="margin:0;">Aun no hay fichas creadas.</p>
+        {% endif %}
     </section>
 {% endif %}
 {% endblock %}
