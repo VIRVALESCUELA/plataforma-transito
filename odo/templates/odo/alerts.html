@@ -10,6 +10,12 @@
         {% if vehicles %}
             <form class="odo-form" method="post">
                 {% csrf_token %}
+                {% if edit_schedule %}
+                    <input type="hidden" name="action" value="update_schedule">
+                    <input type="hidden" name="schedule_id" value="{{ edit_schedule.id }}">
+                {% else %}
+                    <input type="hidden" name="action" value="create_schedule">
+                {% endif %}
                 <div class="odo-field">
                     <label for="{{ schedule_form.vehicle.id_for_label }}">{{ schedule_form.vehicle.label }}</label>
                     {{ schedule_form.vehicle }}
@@ -30,18 +36,36 @@
                     {{ schedule_form.notes }}
                     {{ schedule_form.notes.errors }}
                 </div>
-                <div class="odo-field odo-checklist">
-                    <label for="{{ schedule_form.name.id_for_label }}">{{ schedule_form.name.label }}</label>
-                    {{ schedule_form.name }}
-                    {{ schedule_form.name.errors }}
-                </div>
-                <div class="odo-field">
-                    <label for="{{ schedule_form.custom_name.id_for_label }}">{{ schedule_form.custom_name.label }}</label>
-                    {{ schedule_form.custom_name }}
-                    {{ schedule_form.custom_name.errors }}
-                </div>
+                {% if edit_schedule %}
+                    <div class="odo-row">
+                        <div>
+                            <span class="odo-plate">{{ edit_schedule.vehicle.plate }}</span>
+                            <div class="odo-muted">Editando {{ edit_schedule.name }}</div>
+                        </div>
+                        <div>
+                            <strong>{{ edit_schedule.get_status_display }}</strong><br>
+                            <span class="odo-muted">Se actualiza esta misma alerta</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="odo-field odo-checklist">
+                        <label for="{{ schedule_form.name.id_for_label }}">{{ schedule_form.name.label }}</label>
+                        {{ schedule_form.name }}
+                        {{ schedule_form.name.errors }}
+                    </div>
+                    <div class="odo-field">
+                        <label for="{{ schedule_form.custom_name.id_for_label }}">{{ schedule_form.custom_name.label }}</label>
+                        {{ schedule_form.custom_name }}
+                        {{ schedule_form.custom_name.errors }}
+                    </div>
+                {% endif %}
                 {{ schedule_form.non_field_errors }}
-                <button class="btn" type="submit">Guardar alerta</button>
+                <div class="odo-actions">
+                    <button class="btn" type="submit">{% if edit_schedule %}Actualizar alerta{% else %}Guardar alerta{% endif %}</button>
+                    {% if edit_schedule %}
+                        <a class="btn btn-outline" href="{% url 'odo_web:alerts' %}">Cancelar</a>
+                    {% endif %}
+                </div>
             </form>
         {% else %}
             <p class="odo-empty">Aun no tienes una patente asignada.</p>
@@ -67,7 +91,9 @@
                         {% for schedule in pending_schedules %}
                             <tr>
                                 <td>{{ schedule.vehicle.plate }}</td>
-                                <td>{{ schedule.name }}</td>
+                                <td>
+                                    <a href="{% url 'odo_web:alert-edit' schedule.id %}">{{ schedule.name }}</a>
+                                </td>
                                 <td>{% if schedule.due_odometer %}{{ schedule.due_odometer }}{% else %}&mdash;{% endif %}</td>
                                 <td>{% if schedule.due_date %}{{ schedule.due_date|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
                                 <td>{{ schedule.notes|default:"-" }}</td>

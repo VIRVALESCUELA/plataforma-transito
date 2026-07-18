@@ -8,6 +8,7 @@ from .models import (
     FuelEntry,
     MaintenanceRecord,
     MaintenanceSchedule,
+    MaintenanceScheduleStatus,
     Vehicle,
     VehicleAccess,
     VehicleDocument,
@@ -210,6 +211,12 @@ CUSTOM_ALERT_CHOICES = [
     for _group_label, group_choices in MAINTENANCE_TYPE_CHOICES
     for value, label in group_choices
 ]
+QUICK_ALERT_VALUES = {
+    value
+    for _group_label, group_choices in ALERT_MAINTENANCE_TYPE_CHOICES
+    for value, _label in group_choices
+}
+CUSTOM_ALERT_VALUES = {value for value, _label in CUSTOM_ALERT_CHOICES}
 
 
 class VehicleForm(forms.ModelForm):
@@ -442,7 +449,7 @@ class MaintenanceScheduleForm(OwnerVehicleFormMixin, forms.ModelForm):
         }
         widgets = {
             "due_odometer": forms.NumberInput(attrs={"min": 0}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            "due_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "notes": forms.Textarea(attrs={"rows": 2}),
         }
 
@@ -450,7 +457,14 @@ class MaintenanceScheduleForm(OwnerVehicleFormMixin, forms.ModelForm):
         cleaned_data = super().clean()
         selected_names = cleaned_data.get("name") or []
         custom_name = cleaned_data.get("custom_name")
-        if not selected_names and not custom_name:
+        selected_count = len(set(selected_names + ([custom_name] if custom_name else [])))
+        if self.instance.pk and selected_count > 1:
+            raise forms.ValidationError(
+                "Edita una alerta a la vez para mantener el contexto del vencimiento."
+            )
+        if self.instance.pk:
+            cleaned_data["resolved_name"] = custom_name or (selected_names[0] if selected_names else self.instance.name)
+        elif not selected_names and not custom_name:
             raise forms.ValidationError(
                 "Selecciona una alerta rapida o una alerta personalizada."
             )
@@ -459,6 +473,14 @@ class MaintenanceScheduleForm(OwnerVehicleFormMixin, forms.ModelForm):
                 "Indica kilometraje, fecha o ambos para programar la mantencion."
             )
         return cleaned_data
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, user=user, **kwargs)
+        if self.instance.pk:
+            if self.instance.name in QUICK_ALERT_VALUES:
+                self.fields["name"].initial = [self.instance.name]
+            elif self.instance.name in CUSTOM_ALERT_VALUES:
+                self.fields["custom_name"].initial = self.instance.name
 
     def save_many(self):
         vehicle = self.cleaned_data["vehicle"]
@@ -481,6 +503,16 @@ class MaintenanceScheduleForm(OwnerVehicleFormMixin, forms.ModelForm):
                 )
             )
         return schedules
+
+    def save_update(self):
+        self.instance.vehicle = self.cleaned_data["vehicle"]
+        self.instance.name = self.cleaned_data["resolved_name"]
+        self.instance.due_odometer = self.cleaned_data.get("due_odometer")
+        self.instance.due_date = self.cleaned_data.get("due_date")
+        self.instance.notes = self.cleaned_data.get("notes", "")
+        self.instance.status = MaintenanceScheduleStatus.PENDING
+        self.instance.save()
+        return self.instance
 
 
 class MaintenanceRecordForm(OwnerVehicleFormMixin, forms.Form):

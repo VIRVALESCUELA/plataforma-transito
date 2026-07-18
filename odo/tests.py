@@ -505,6 +505,82 @@ class OdoDashboardWebTests(TestCase):
         )
         self.assertContains(response, "3 alerta(s)")
 
+    def test_user_can_update_overdue_schedule_from_alerts(self):
+        vehicle = Vehicle.objects.create(
+            owner=self.user,
+            plate="ALRT12",
+            current_odometer=9000,
+        )
+        VehicleAccess.objects.create(vehicle=vehicle, user=self.user)
+        schedule = MaintenanceSchedule.objects.create(
+            vehicle=vehicle,
+            name="Revision tecnica",
+            due_date=date(2026, 1, 10),
+            status=MaintenanceScheduleStatus.OVERDUE,
+            notes="Fecha vencida",
+        )
+
+        response = self.client.post(
+            reverse("odo_web:alerts"),
+            {
+                "action": "update_schedule",
+                "schedule_id": schedule.id,
+                "vehicle": vehicle.id,
+                "name": "Revision tecnica",
+                "custom_name": "",
+                "due_odometer": "",
+                "due_date": "2026-12-31",
+                "notes": "Fecha actualizada",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        schedule.refresh_from_db()
+        self.assertEqual(schedule.due_date, date(2026, 12, 31))
+        self.assertEqual(schedule.status, MaintenanceScheduleStatus.PENDING)
+        self.assertEqual(schedule.notes, "Fecha actualizada")
+        self.assertContains(response, "Alerta Revision tecnica actualizada")
+
+    def test_alert_edit_view_preserves_schedule_context(self):
+        vehicle = Vehicle.objects.create(
+            owner=self.user,
+            plate="EDIT12",
+            current_odometer=9000,
+        )
+        VehicleAccess.objects.create(vehicle=vehicle, user=self.user)
+        schedule = MaintenanceSchedule.objects.create(
+            vehicle=vehicle,
+            name="Revision tecnica",
+            due_date=date(2026, 1, 10),
+            status=MaintenanceScheduleStatus.OVERDUE,
+        )
+
+        response = self.client.get(reverse("odo_web:alert-edit", args=[schedule.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar alerta")
+        self.assertContains(response, "Editando Revision tecnica")
+
+        response = self.client.post(
+            reverse("odo_web:alert-edit", args=[schedule.id]),
+            {
+                "action": "update_schedule",
+                "schedule_id": schedule.id,
+                "vehicle": vehicle.id,
+                "due_odometer": "",
+                "due_date": "2026-12-31",
+                "notes": "Nueva fecha, misma alerta",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        schedule.refresh_from_db()
+        self.assertEqual(schedule.name, "Revision tecnica")
+        self.assertEqual(schedule.due_date, date(2026, 12, 31))
+        self.assertEqual(schedule.status, MaintenanceScheduleStatus.PENDING)
+
     def test_dashboard_shows_vehicle_oil_and_inspection_status(self):
         vehicle = Vehicle.objects.create(
             owner=self.user,
@@ -596,6 +672,39 @@ class OdoDashboardWebTests(TestCase):
         self.assertEqual(document.document_type, "TECHNICAL_INSPECTION")
         self.assertEqual(document.uploaded_by, self.user)
         self.assertContains(response, "Revision tecnica")
+
+    def test_user_can_upload_vehicle_document_from_vehicles_view(self):
+        vehicle = Vehicle.objects.create(
+            owner=self.user,
+            plate="DOCV12",
+            current_odometer=9000,
+        )
+        VehicleAccess.objects.create(vehicle=vehicle, user=self.user)
+        uploaded_file = SimpleUploadedFile(
+            "soap.pdf",
+            b"documento de prueba",
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(
+            reverse("odo_web:vehicles"),
+            {
+                "action": "upload_document",
+                "vehicle": vehicle.id,
+                "document_type": "SOAP",
+                "file": uploaded_file,
+                "issued_at": "2026-06-01",
+                "expires_at": "2027-06-01",
+                "notes": "SOAP cargado",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        document = VehicleDocument.objects.get(vehicle=vehicle)
+        self.assertEqual(document.document_type, "SOAP")
+        self.assertEqual(document.uploaded_by, self.user)
+        self.assertContains(response, "SOAP")
 
     def test_non_staff_cannot_access_odo(self):
         user_model = get_user_model()

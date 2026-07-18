@@ -413,7 +413,6 @@
             {% if user.is_superuser %}
                 <a class="{% if request.resolver_match.url_name == 'access' %}is-active{% endif %}" href="{% url 'odo_web:access' %}">Asignar patentes</a>
             {% endif %}
-            <a class="{% if request.resolver_match.url_name == 'documents' %}is-active{% endif %}" href="{% url 'odo_web:documents' %}">Documentos</a>
             <a class="{% if request.resolver_match.url_name == 'alerts' %}is-active{% endif %}" href="{% url 'odo_web:alerts' %}">Alertas</a>
             <a class="{% if request.resolver_match.url_name == 'maintenance' %}is-active{% endif %}" href="{% url 'odo_web:maintenance' %}">Mantenciones</a>
         </nav>

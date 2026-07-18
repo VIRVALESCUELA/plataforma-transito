@@ -21,5 +21,6 @@ urlpatterns = [
     path("documentos/<int:pk>/editar/", OdoDocumentEditView.as_view(), name="document-edit"),
     path("documentos/<int:pk>/eliminar/", OdoDocumentDeleteView.as_view(), name="document-delete"),
     path("alertas/", OdoAlertsView.as_view(), name="alerts"),
+    path("alertas/<int:pk>/editar/", OdoAlertsView.as_view(), name="alert-edit"),
     path("mantenciones/", OdoMaintenanceView.as_view(), name="maintenance"),
 ]

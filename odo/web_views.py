@@ -185,7 +185,7 @@ class OdoContextMixin:
                 MaintenanceScheduleStatus.PENDING,
                 MaintenanceScheduleStatus.OVERDUE,
             ],
-        ).select_related("vehicle")[:8]
+        ).select_related("vehicle")
         return context
 
 
@@ -223,6 +223,23 @@ class OdoVehiclesView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
     template_name = "odo/vehicles.html"
 
     def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        if action == "upload_document":
+            form = VehicleDocumentForm(request.POST, request.FILES, user=request.user)
+            if form.is_valid():
+                document = form.save(uploaded_by=request.user)
+                messages.success(
+                    request,
+                    f"Documento {document.get_document_type_display()} cargado para {document.vehicle.plate}.",
+                )
+                return redirect("odo_web:vehicles")
+            messages.error(request, "Revisa los datos del documento.")
+            return self.render_to_response(self.get_context_data(document_form=form))
+
+        if action != "create_vehicle":
+            messages.error(request, "Accion ODO no reconocida.")
+            return redirect("odo_web:vehicles")
+
         if not request.user.is_superuser:
             messages.error(request, "Solo el superusuario puede registrar vehiculos.")
             return redirect("odo_web:vehicles")
@@ -278,7 +295,58 @@ class OdoAccessView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
 class OdoAlertsView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
     template_name = "odo/alerts.html"
 
+    def _get_edit_schedule(self):
+        schedule_id = self.kwargs.get("pk") or self.request.GET.get("edit")
+        if not schedule_id:
+            return None
+        schedule = get_object_or_404(
+            MaintenanceSchedule.objects.select_related("vehicle"),
+            pk=schedule_id,
+        )
+        if not user_can_access_vehicle(self.request.user, schedule.vehicle):
+            messages.error(self.request, "No tienes acceso a esa alerta.")
+            return None
+        return schedule
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        edit_schedule = kwargs.get("edit_schedule") or self._get_edit_schedule()
+        context["edit_schedule"] = edit_schedule
+        if edit_schedule and "schedule_form" not in kwargs:
+            context["schedule_form"] = MaintenanceScheduleForm(
+                instance=edit_schedule,
+                user=self.request.user,
+            )
+        return context
+
     def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        if action == "update_schedule":
+            schedule = get_object_or_404(
+                MaintenanceSchedule.objects.select_related("vehicle"),
+                pk=request.POST.get("schedule_id"),
+            )
+            if not user_can_access_vehicle(request.user, schedule.vehicle):
+                messages.error(request, "No tienes acceso a esa alerta.")
+                return redirect("odo_web:alerts")
+            form = MaintenanceScheduleForm(
+                request.POST,
+                instance=schedule,
+                user=request.user,
+            )
+            if form.is_valid():
+                schedule = form.save_update()
+                evaluate_vehicle_alerts(schedule.vehicle)
+                messages.success(
+                    request,
+                    f"Alerta {schedule.name} actualizada para {schedule.vehicle.plate}.",
+                )
+                return redirect("odo_web:alerts")
+            messages.error(request, "Revisa los datos de la alerta.")
+            return self.render_to_response(
+                self.get_context_data(schedule_form=form, edit_schedule=schedule)
+            )
+
         form = MaintenanceScheduleForm(request.POST, user=request.user)
         if form.is_valid():
             schedules = form.save_many()
@@ -375,7 +443,7 @@ class OdoDocumentEditView(OdoStaffRequiredMixin, OdoContextMixin, TemplateView):
             ):
                 old_file.delete(save=False)
             messages.success(request, "Documento actualizado.")
-            return redirect("odo_web:documents")
+            return redirect("odo_web:vehicles")
         messages.error(request, "Revisa los datos del documento.")
         return self.render_to_response(self.get_context_data(document_form=form))
 
@@ -388,10 +456,10 @@ class OdoDocumentDeleteView(OdoStaffRequiredMixin, View):
         )
         if not user_can_access_vehicle(request.user, document.vehicle):
             messages.error(request, "No tienes acceso a esa patente.")
-            return redirect("odo_web:documents")
+            return redirect("odo_web:vehicles")
         document_file = document.file
         document.delete()
         if document_file:
             document_file.delete(save=False)
         messages.success(request, "Documento eliminado.")
-        return redirect("odo_web:documents")
+        return redirect("odo_web:vehicles")
