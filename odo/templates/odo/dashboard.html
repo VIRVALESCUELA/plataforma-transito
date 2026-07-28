@@ -5,7 +5,7 @@
 
 {% block odo_content %}
 <div class="odo-two-col">
-    <div class="odo-panel">
+    <div class="odo-panel odo-dashboard-fuel-panel">
         <h2>Carga rapida</h2>
         {% if vehicles %}
             <form class="odo-form" method="post">
@@ -29,15 +29,17 @@
         {% endif %}
     </div>
 
-    <div class="odo-panel">
+    <div class="odo-panel odo-dashboard-status-panel">
         <h2>Estado rapido</h2>
         {% if vehicle_status_cards %}
-            <div class="odo-list">
+            <div class="odo-list odo-dashboard-status-list">
                 {% for card in vehicle_status_cards %}
-                    <div>
-                        <span class="odo-plate">{{ card.vehicle.plate }}</span>
-                        <div class="odo-muted">{{ card.vehicle.current_odometer }} km actuales</div>
-                        <div class="odo-status-grid" style="margin-top: 0.65rem;">
+                    <div class="odo-status-card">
+                        <div class="odo-status-card-heading">
+                            <span class="odo-plate">{{ card.vehicle.plate }}</span>
+                            <span class="odo-muted">{{ card.vehicle.current_odometer }} km actuales</span>
+                        </div>
+                        <div class="odo-status-grid">
                             <div class="odo-status-box">
                                 <span>Aceite</span>
                                 {% if card.oil_schedule %}
@@ -84,10 +86,10 @@
     </div>
 </div>
 
-<div class="odo-panel">
+<div class="odo-panel odo-dashboard-recent-panel">
     <h2>Ultimas cargas</h2>
     {% if recent_fuel_cards %}
-        <div class="odo-list">
+        <div class="odo-list odo-fuel-list">
             {% for card in recent_fuel_cards %}
                 <div class="odo-row odo-fuel-row">
                     <div class="odo-fuel-main">
@@ -109,7 +111,7 @@
                         </div>
                     </div>
                     <div class="odo-fuel-total">
-                        <strong>${{ card.entry.total_cost|floatformat:0 }}</strong><br>
+                        <strong>${{ card.entry.total_cost|floatformat:0 }}</strong>
                         <span class="odo-muted">{{ card.entry.odometer }} km</span>
                     </div>
                 </div>

@@ -125,6 +125,55 @@
     .odo-status-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
+    .odo-dashboard-fuel-panel,
+    .odo-dashboard-status-panel {
+        align-self: start;
+    }
+    .odo-dashboard-status-panel {
+        max-height: 560px;
+        overflow: hidden;
+    }
+    .odo-dashboard-status-list {
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 0.2rem;
+    }
+    .odo-status-card {
+        display: grid;
+        gap: 0.55rem;
+        padding: 0.75rem;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: #fbfdff;
+    }
+    .odo-status-card-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .odo-status-card .odo-status-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+    .odo-status-card .odo-status-box {
+        padding: 0.55rem;
+        box-shadow: inset 0 2px 0 rgba(244, 198, 75, 0.6);
+    }
+    .odo-status-card .odo-status-box span {
+        font-size: 0.68rem;
+        line-height: 1.1;
+    }
+    .odo-status-card .odo-status-box strong {
+        margin-top: 0.25rem;
+        font-size: 0.88rem;
+    }
+    .odo-status-card .odo-status-box small {
+        margin-top: 0.15rem;
+        font-size: 0.72rem;
+        line-height: 1.15;
+    }
     .odo-form {
         display: grid;
         gap: 0.8rem;
@@ -249,6 +298,22 @@
         gap: 0.65rem;
         margin-top: 0.75rem;
     }
+    .odo-panel > .odo-list,
+    .odo-panel > .odo-table-wrap,
+    .odo-scroll-area {
+        max-height: 520px;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+    .odo-panel > .odo-list,
+    .odo-scroll-area {
+        padding-right: 0.2rem;
+    }
+    .odo-scroll-area {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
     .odo-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -263,7 +328,9 @@
         border-bottom: 1px solid rgba(15, 23, 42, 0.08);
     }
     .odo-fuel-row {
-        align-items: flex-start;
+        grid-template-columns: minmax(140px, 1.1fr) minmax(220px, 1fr) minmax(170px, auto);
+        align-items: center;
+        gap: 0.75rem;
     }
     .odo-fuel-main {
         min-width: 0;
@@ -272,14 +339,14 @@
     .odo-fuel-metrics {
         display: flex;
         flex: 1 1 0;
-        gap: 0.75rem;
-        align-items: flex-start;
-        justify-content: center;
+        gap: 0.45rem;
+        align-items: stretch;
+        justify-content: flex-start;
         text-align: center;
     }
     .odo-fuel-metrics > div {
-        min-width: 6rem;
-        padding: 0.45rem 0.6rem;
+        min-width: 5.6rem;
+        padding: 0.4rem 0.55rem;
         border-radius: 8px;
         background: #f8fafc;
     }
@@ -300,8 +367,15 @@
         white-space: nowrap;
     }
     .odo-fuel-total {
-        flex: 1 1 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: flex-end;
+        gap: 0.75rem;
         text-align: right;
+        white-space: nowrap;
+    }
+    .odo-fuel-total strong {
+        color: #17212f;
     }
     .odo-table-wrap {
         overflow-x: auto;
@@ -314,6 +388,9 @@
         border-radius: 0;
     }
     .odo-table-wrap table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
         background: #f8fafc;
         color: #334155;
         font-size: 0.76rem;
@@ -367,8 +444,22 @@
         .odo-checklist #id_services {
             grid-template-columns: 1fr;
         }
+        .odo-dashboard-status-panel {
+            max-height: none;
+        }
+        .odo-dashboard-status-list {
+            overflow-y: auto;
+        }
+        .odo-panel > .odo-list,
+        .odo-panel > .odo-table-wrap,
+        .odo-scroll-area {
+            max-height: 440px;
+        }
+        .odo-status-card .odo-status-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .odo-fuel-row {
-            display: grid;
+            grid-template-columns: 1fr;
             gap: 0.5rem;
         }
         .odo-fuel-metrics {
@@ -377,6 +468,7 @@
             flex-wrap: wrap;
         }
         .odo-fuel-total {
+            justify-content: flex-start;
             text-align: left;
         }
         .odo-nav {
@@ -397,6 +489,15 @@
         }
         .odo-nav a {
             justify-content: flex-start;
+        }
+        .odo-status-card .odo-status-grid {
+            grid-template-columns: 1fr;
+        }
+        .odo-fuel-total {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.1rem;
+            white-space: normal;
         }
     }
 </style>

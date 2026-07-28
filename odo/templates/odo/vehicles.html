@@ -118,59 +118,61 @@
 <div class="odo-panel">
     <h2>Documentos cargados</h2>
     {% if document_groups %}
-        {% for group in document_groups %}
-            <section class="odo-document-group">
-                <div class="odo-document-heading">
-                    <div>
-                        <span class="odo-plate">{{ group.vehicle.plate }}</span>
-                        <p class="odo-muted">
-                            {{ group.vehicle.alias|default:"Sin VIN" }}
-                            {% if group.vehicle.brand or group.vehicle.model %}
-                                · {{ group.vehicle.brand }} {{ group.vehicle.model }}
-                            {% endif %}
-                        </p>
+        <div class="odo-scroll-area">
+            {% for group in document_groups %}
+                <section class="odo-document-group">
+                    <div class="odo-document-heading">
+                        <div>
+                            <span class="odo-plate">{{ group.vehicle.plate }}</span>
+                            <p class="odo-muted">
+                                {{ group.vehicle.alias|default:"Sin VIN" }}
+                                {% if group.vehicle.brand or group.vehicle.model %}
+                                    · {{ group.vehicle.brand }} {{ group.vehicle.model }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <span class="odo-muted">{{ group.documents|length }} documento(s)</span>
                     </div>
-                    <span class="odo-muted">{{ group.documents|length }} documento(s)</span>
-                </div>
-                <div class="odo-table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Documento</th>
-                                <th>Emision</th>
-                                <th>Vencimiento</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                                <th>Notas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for document in group.documents %}
+                    <div class="odo-table-wrap">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td>{{ document.get_document_type_display }}</td>
-                                    <td>{% if document.issued_at %}{{ document.issued_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
-                                    <td>{% if document.expires_at %}{{ document.expires_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
-                                    <td>{{ document.status_label }}</td>
-                                    <td>
-                                        <div class="odo-actions">
-                                            {% if document.file %}
-                                                <a class="btn btn-outline" href="{{ document.file.url }}" target="_blank" rel="noopener">Ver</a>
-                                            {% endif %}
-                                            <a class="btn btn-outline" href="{% url 'odo_web:document-edit' document.pk %}">Editar</a>
-                                            <form method="post" action="{% url 'odo_web:document-delete' document.pk %}">
-                                                {% csrf_token %}
-                                                <button class="btn btn-outline" type="submit" onclick="return confirm('Se eliminara este documento y su archivo. ¿Deseas continuar?');">Eliminar</button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                    <td>{{ document.notes|default:"-" }}</td>
+                                    <th>Documento</th>
+                                    <th>Emision</th>
+                                    <th>Vencimiento</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                    <th>Notas</th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        {% endfor %}
+                            </thead>
+                            <tbody>
+                                {% for document in group.documents %}
+                                    <tr>
+                                        <td>{{ document.get_document_type_display }}</td>
+                                        <td>{% if document.issued_at %}{{ document.issued_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
+                                        <td>{% if document.expires_at %}{{ document.expires_at|date:"d/m/Y" }}{% else %}&mdash;{% endif %}</td>
+                                        <td>{{ document.status_label }}</td>
+                                        <td>
+                                            <div class="odo-actions">
+                                                {% if document.file %}
+                                                    <a class="btn btn-outline" href="{{ document.file.url }}" target="_blank" rel="noopener">Ver</a>
+                                                {% endif %}
+                                                <a class="btn btn-outline" href="{% url 'odo_web:document-edit' document.pk %}">Editar</a>
+                                                <form method="post" action="{% url 'odo_web:document-delete' document.pk %}">
+                                                    {% csrf_token %}
+                                                    <button class="btn btn-outline" type="submit" onclick="return confirm('Se eliminara este documento y su archivo. ¿Deseas continuar?');">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td>{{ document.notes|default:"-" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
     {% else %}
         <p class="odo-empty">No hay documentos cargados.</p>
     {% endif %}
