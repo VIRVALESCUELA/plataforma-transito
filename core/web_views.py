@@ -228,6 +228,7 @@ class InscripcionCreateView(FormView):
                 correo__iexact=data["correo"].strip(),
                 telefono=data["telefono"].strip(),
                 curso=data.get("curso") or "",
+                fecha_nacimiento=data.get("fecha_nacimiento"),
                 created_at__gte=threshold,
             )
             .order_by("-created_at")
@@ -255,6 +256,7 @@ class InscripcionCreateView(FormView):
             f"Direccion: {inscripcion.direccion or 'No especificada'}\n"
             f"Correo: {inscripcion.correo}\n"
             f"Telefono: {inscripcion.telefono}\n"
+            f"Fecha de nacimiento: {inscripcion.fecha_nacimiento.strftime('%d/%m/%Y') if inscripcion.fecha_nacimiento else 'No especificada'}\n"
             f"Curso: {curso}"
         )
         whatsapp_url = f"https://wa.me/{whatsapp_number}?text={quote(message)}"
@@ -417,10 +419,23 @@ class InscripcionManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
                 "tone": "background: #fce4ec; color: #ad1457;",
             },
         ]
-        context["inscripciones"] = (
+        search_query = self.request.GET.get("q", "").strip()
+        inscripciones = (
             Inscripcion.objects.select_related("activation_code", "user", "ficha_alumno")
             .order_by("-created_at")
         )
+        if search_query:
+            inscripciones = inscripciones.filter(
+                Q(nombre__icontains=search_query)
+                | Q(correo__icontains=search_query)
+                | Q(user__first_name__icontains=search_query)
+                | Q(user__last_name__icontains=search_query)
+                | Q(user__email__icontains=search_query)
+                | Q(user__username__icontains=search_query)
+            )
+        context["search_query"] = search_query
+        context["inscripciones"] = inscripciones
+        context["filtered_inscripciones_count"] = inscripciones.count()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -840,6 +855,7 @@ class ExportDownloadView(PrivateAreaMixin, SuperuserRequiredMixin, View):
                 "email",
                 "nombre",
                 "apellido",
+                "rut",
                 "rol",
                 "access_activated_at",
                 "access_expires_at",
@@ -858,6 +874,7 @@ class ExportDownloadView(PrivateAreaMixin, SuperuserRequiredMixin, View):
                     profile.user.email,
                     profile.user.first_name,
                     profile.user.last_name,
+                    profile.rut,
                     profile.get_role_display(),
                     profile.access_activated_at,
                     profile.access_expires_at,
@@ -885,6 +902,8 @@ class ExportDownloadView(PrivateAreaMixin, SuperuserRequiredMixin, View):
                 "direccion",
                 "correo",
                 "telefono",
+                "rut",
+                "fecha_nacimiento",
                 "curso",
                 "estado",
                 "activation_code",
@@ -900,6 +919,8 @@ class ExportDownloadView(PrivateAreaMixin, SuperuserRequiredMixin, View):
                     inscripcion.direccion,
                     inscripcion.correo,
                     inscripcion.telefono,
+                    inscripcion.rut,
+                    inscripcion.fecha_nacimiento,
                     inscripcion.curso,
                     inscripcion.get_status_display(),
                     inscripcion.activation_code.code if inscripcion.activation_code else "",
@@ -1403,6 +1424,8 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
         )
 
     def _initial_from_inscripcion(self, inscripcion):
+        user = self._find_user_for_inscripcion(inscripcion)
+        profile = getattr(user, "profile", None) if user else None
         return {
             "fecha_inscripcion": timezone.localdate(inscripcion.created_at),
             "nombre": inscripcion.nombre,
@@ -1410,6 +1433,8 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
             "telefono": inscripcion.telefono,
             "direccion": inscripcion.direccion,
             "curso": inscripcion.curso,
+            "rut": inscripcion.rut or getattr(profile, "rut", ""),
+            "fecha_nacimiento": inscripcion.fecha_nacimiento,
         }
 
     def get_context_data(self, **kwargs):
@@ -1465,14 +1490,21 @@ class FichaAlumnoManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateVi
         ficha = None
         inscripcion = None
         initial = {}
+        form_data = request.POST
 
         if action == "edit":
             ficha = get_object_or_404(FichaAlumno, pk=request.POST.get("ficha_id"))
         elif action == "create_from_inscripcion":
             inscripcion = get_object_or_404(Inscripcion, pk=request.POST.get("inscripcion_id"))
             initial = self._initial_from_inscripcion(inscripcion)
+            form_data = request.POST.copy()
+            for field_name, value in initial.items():
+                if value and not form_data.get(field_name):
+                    form_data[field_name] = (
+                        value.isoformat() if hasattr(value, "isoformat") else value
+                    )
 
-        form = FichaAlumnoForm(request.POST or None, instance=ficha, initial=initial)
+        form = FichaAlumnoForm(form_data or None, instance=ficha, initial=initial)
         if not form.is_valid():
             messages.error(request, "Revisa los datos de la ficha.")
             return self.render_to_response(
@@ -1552,12 +1584,24 @@ class StaffStudentManagementView(PrivateAreaMixin, StaffRequiredMixin, TemplateV
             )
             .order_by("-access_expires_at", "user__first_name", "user__username")
         )
-        context["students"] = students
-        context["active_students_count"] = students.filter(
+        total_students_count = students.count()
+        active_students_count = students.filter(
             access_expires_at__isnull=False,
             access_expires_at__gte=now,
         ).count()
-        context["total_students_count"] = students.count()
+        search_query = self.request.GET.get("q", "").strip()
+        if search_query:
+            students = students.filter(
+                Q(user__first_name__icontains=search_query)
+                | Q(user__last_name__icontains=search_query)
+                | Q(user__email__icontains=search_query)
+                | Q(user__username__icontains=search_query)
+            )
+        context["students"] = students
+        context["search_query"] = search_query
+        context["filtered_students_count"] = students.count()
+        context["active_students_count"] = active_students_count
+        context["total_students_count"] = total_students_count
         return context
 
 

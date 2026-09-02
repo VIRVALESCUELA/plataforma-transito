@@ -59,6 +59,12 @@ class StudentSignupForm(UserCreationForm):
     first_name = forms.CharField(max_length=150, required=False, label="Nombre")
     last_name = forms.CharField(max_length=150, required=False, label="Apellido")
     email = forms.EmailField(required=True, label="Correo")
+    rut = forms.CharField(
+        max_length=20,
+        required=False,
+        label="RUT",
+        widget=forms.TextInput(attrs={"placeholder": "Ej: 12.345.678-9"}),
+    )
     activation_code = forms.CharField(
         max_length=40,
         required=False,
@@ -69,7 +75,7 @@ class StudentSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("first_name", "last_name", "email", "activation_code")
+        fields = ("first_name", "last_name", "email", "rut", "activation_code")
 
     def clean_email(self):
         email = (self.cleaned_data.get("email") or "").strip().lower()
@@ -144,7 +150,11 @@ class StudentSignupForm(UserCreationForm):
         if commit:
             user.save()
             profile, _ = Profile.objects.update_or_create(
-                user=user, defaults={"role": UserRole.ALUMNO}
+                user=user,
+                defaults={
+                    "role": UserRole.ALUMNO,
+                    "rut": self.cleaned_data.get("rut") or "",
+                },
             )
 
             activation = self.cleaned_data.get("activation_instance")
@@ -152,6 +162,8 @@ class StudentSignupForm(UserCreationForm):
                 activate_code_for_user(user, activation)
 
             if inscripcion:
+                if self.cleaned_data.get("rut") and not inscripcion.rut:
+                    inscripcion.rut = self.cleaned_data["rut"]
                 inscripcion.user = user
                 if activation:
                     inscripcion.status = Inscripcion.Status.CURSO_ACTIVO
@@ -161,7 +173,7 @@ class StudentSignupForm(UserCreationForm):
                     Inscripcion.Status.MATRICULADO,
                 ):
                     inscripcion.status = Inscripcion.Status.CUENTA_CREADA
-                inscripcion.save(update_fields=["user", "status"])
+                inscripcion.save(update_fields=["user", "status", "rut"])
 
         return user
 
@@ -208,7 +220,15 @@ class InscripcionForm(forms.ModelForm):
 
     class Meta:
         model = Inscripcion
-        fields = ["nombre", "comuna", "direccion", "correo", "telefono", "curso"]
+        fields = [
+            "nombre",
+            "comuna",
+            "direccion",
+            "correo",
+            "telefono",
+            "fecha_nacimiento",
+            "curso",
+        ]
         widgets = {
             "nombre": forms.TextInput(attrs={"placeholder": "Ingresa tu nombre completo", "maxlength": 80}),
             "comuna": forms.TextInput(attrs={"placeholder": "Ej: Penalolen", "maxlength": 80}),
@@ -224,6 +244,10 @@ class InscripcionForm(forms.ModelForm):
                     "pattern": r"(\+?56\s?)?9\s?\d{4}\s?\d{4}",
                     "title": "Formato esperado: +56 9 1234 5678",
                 }
+            ),
+            "fecha_nacimiento": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
             ),
             "curso": forms.Select(),
         }

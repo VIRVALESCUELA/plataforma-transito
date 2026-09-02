@@ -10,6 +10,7 @@ class UserRole(models.TextChoices):
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=UserRole.choices, default=UserRole.ALUMNO)
+    rut = models.CharField(max_length=20, blank=True)
     access_activated_at = models.DateTimeField(null=True, blank=True)
     access_expires_at = models.DateTimeField(null=True, blank=True)
     activated_course_name = models.CharField(max_length=120, blank=True)
@@ -61,6 +62,8 @@ class Inscripcion(models.Model):
     correo = models.EmailField()
     telefono = models.CharField(max_length=30)
     curso = models.CharField(max_length=120, blank=True)
+    rut = models.CharField(max_length=20, blank=True)
+    fecha_nacimiento = models.DateField(null=True, blank=True)
     status = models.CharField(
         max_length=16,
         choices=Status.choices,

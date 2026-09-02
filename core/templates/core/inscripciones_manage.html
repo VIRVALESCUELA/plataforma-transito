@@ -11,6 +11,16 @@
     .inscriptions-table-actions form {
         margin: 0;
     }
+    .inscriptions-search-form {
+        display: flex;
+        gap: 0.65rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .inscriptions-search-form input {
+        min-width: min(100%, 320px);
+        flex: 1 1 320px;
+    }
     @media (max-width: 680px) {
         .inscriptions-table-wrap {
             max-height: none;
@@ -103,6 +113,23 @@
 </section>
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
+    <form class="inscriptions-search-form" method="get">
+        <input
+            type="search"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Buscar por nombre o correo"
+            aria-label="Buscar inscripcion por nombre o correo"
+        >
+        <button class="btn" type="submit">Buscar</button>
+        {% if search_query %}
+            <a class="btn btn-outline" href="{% url 'core_web:manage-inscripciones' %}">Limpiar</a>
+            <span class="meta" style="color:#455a64;">{{ filtered_inscripciones_count }} resultado(s)</span>
+        {% endif %}
+    </form>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1rem;">
     {% if inscripciones %}
         <div class="sticky-table-wrap inscriptions-table-wrap">
             <table class="sticky-header-table inscriptions-table">
@@ -128,6 +155,9 @@
                             <td data-label="Contacto">
                                 {{ inscripcion.correo }}<br>
                                 <span class="meta" style="color:#455a64;">{{ inscripcion.telefono }}</span>
+                                {% if inscripcion.fecha_nacimiento %}
+                                    <br><span class="meta" style="color:#455a64;">Nacimiento: {{ inscripcion.fecha_nacimiento|date:"d/m/Y" }}</span>
+                                {% endif %}
                                 {% if inscripcion.direccion %}
                                     <br><span class="meta" style="color:#455a64;">{{ inscripcion.direccion }}</span>
                                 {% endif %}

@@ -123,6 +123,7 @@ class SignupInscripcionLinkTests(TestCase):
                 "first_name": "",
                 "last_name": "",
                 "email": "ana@example.com",
+                "rut": "12.345.678-9",
                 "activation_code": "CLASEB-LINK1",
                 "password1": "strong-pass-123",
                 "password2": "strong-pass-123",
@@ -138,6 +139,8 @@ class SignupInscripcionLinkTests(TestCase):
         self.assertEqual(inscripcion.status, Inscripcion.Status.CURSO_ACTIVO)
         self.assertEqual(activation.used_by, user)
         self.assertTrue(profile.has_active_exam_access())
+        self.assertEqual(profile.rut, "12.345.678-9")
+        self.assertEqual(inscripcion.rut, "12.345.678-9")
         self.assertEqual(user.first_name, "Ana")
         self.assertEqual(user.last_name, "Conductora")
 
@@ -150,6 +153,7 @@ class InscripcionTests(TestCase):
             "direccion": "Av. Principal 1234",
             "correo": "test@example.com",
             "telefono": "+56 9 1234 5678",
+            "fecha_nacimiento": "2000-06-01",
             "curso": "Curso base mecanico",
         }
         response = self.client.post(reverse("core_web:inscripcion"), payload)
@@ -162,10 +166,15 @@ class InscripcionTests(TestCase):
             Inscripcion.objects.get(nombre="Test Alumno").direccion,
             "Av. Principal 1234",
         )
+        self.assertEqual(
+            Inscripcion.objects.get(nombre="Test Alumno").fecha_nacimiento,
+            date(2000, 6, 1),
+        )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["virvalescuela@gmail.com"])
         self.assertIn("Test Alumno", mail.outbox[0].body)
         self.assertIn("Av. Principal 1234", mail.outbox[0].body)
+        self.assertIn("01/06/2000", mail.outbox[0].body)
         self.assertIn("Curso base mecanico", mail.outbox[0].body)
 
     def test_duplicate_inscripcion_post_reuses_recent_record(self):
@@ -695,6 +704,7 @@ class ActivationFlowTests(TestCase):
         response = self.client.get(reverse("student_signup"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "RUT")
         self.assertContains(response, "Codigo de activacion")
         self.assertContains(response, "Opcional")
 
@@ -1142,6 +1152,25 @@ class InscripcionManagementTests(TestCase):
         self.assertContains(response, "Accesos activos")
         self.assertContains(response, "Codigos disponibles")
 
+    def test_staff_can_filter_inscripciones_by_name_or_email(self):
+        Inscripcion.objects.create(
+            nombre="Alumno Oculto",
+            comuna="Santiago",
+            correo="oculto@example.com",
+            telefono="+56 9 3333 4444",
+            curso="Curso teorico",
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.get(
+            reverse("core_web:manage-inscripciones"),
+            {"q": "sucursal@example.com"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Alumno Sucursal")
+        self.assertNotContains(response, "Alumno Oculto")
+
     def test_staff_can_generate_activation_code_from_inscripcion(self):
         self.client.force_login(self.staff)
         response = self.client.post(
@@ -1463,8 +1492,31 @@ class InscripcionManagementTests(TestCase):
         self.assertContains(detail_response, "Vista de auditoria solo lectura")
         self.assertContains(detail_response, "Examenes del alumno")
 
+    def test_staff_can_filter_student_audit_list_by_name_or_email(self):
+        other_student = get_user_model().objects.create_user(
+            username="otro@example.com",
+            email="otro@example.com",
+            password="strong-pass-123",
+            first_name="Otro",
+        )
+        other_student.profile.role = UserRole.ALUMNO
+        other_student.profile.save()
+        self.client.force_login(self.staff)
+
+        response = self.client.get(
+            reverse("core_web:staff-students"),
+            {"q": "alumno-uno"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Alumno")
+        self.assertNotContains(response, "Otro")
+
     def test_staff_can_create_ficha_from_inscripcion(self):
         self.client.force_login(self.staff)
+        self.inscripcion.rut = "12.345.678-9"
+        self.inscripcion.fecha_nacimiento = date(2000, 6, 1)
+        self.inscripcion.save(update_fields=["rut", "fecha_nacimiento"])
 
         response = self.client.post(
             reverse("core_web:fichas"),
@@ -1478,8 +1530,6 @@ class InscripcionManagementTests(TestCase):
                 "telefono": self.inscripcion.telefono,
                 "direccion": "Av. Principal 1234",
                 "curso": self.inscripcion.curso,
-                "rut": "12.345.678-9",
-                "fecha_nacimiento": "2000-06-01",
                 "valor_pagado": "120000",
                 "forma_pago": "TRANSFERENCIA",
             },
@@ -1490,6 +1540,8 @@ class InscripcionManagementTests(TestCase):
         self.assertEqual(ficha.inscripcion, self.inscripcion)
         self.assertEqual(ficha.correo, self.inscripcion.correo)
         self.assertEqual(ficha.direccion, "Av. Principal 1234")
+        self.assertEqual(ficha.rut, "12.345.678-9")
+        self.assertEqual(ficha.fecha_nacimiento, date(2000, 6, 1))
         self.assertEqual(ficha.valor_pagado, 120000)
         movimiento = ficha.movimientos.get()
         self.assertEqual(movimiento.concepto, self.inscripcion.curso)

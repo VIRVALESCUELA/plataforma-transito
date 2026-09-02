@@ -209,6 +209,8 @@
                             <th>Nombre</th>
                             <th>Correo</th>
                             <th>Direccion</th>
+                            <th>RUT</th>
+                            <th>Nacimiento</th>
                             <th>Curso</th>
                             <th>Ficha</th>
                         </tr>
@@ -220,6 +222,14 @@
                                 <td>{{ inscripcion.nombre }}</td>
                                 <td>{{ inscripcion.correo }}</td>
                                 <td>{{ inscripcion.direccion|default:"Sin direccion" }}</td>
+                                <td>{{ inscripcion.rut|default:"Sin rut" }}</td>
+                                <td>
+                                    {% if inscripcion.fecha_nacimiento %}
+                                        {{ inscripcion.fecha_nacimiento|date:"d/m/Y" }}
+                                    {% else %}
+                                        Sin fecha
+                                    {% endif %}
+                                </td>
                                 <td>{{ inscripcion.curso|default:"Sin definir" }}</td>
                                 <td>
                                     <form method="post" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -233,6 +243,8 @@
                                         <input name="telefono" type="hidden" value="{{ inscripcion.telefono }}">
                                         <input name="direccion" type="hidden" value="{{ inscripcion.direccion }}">
                                         <input name="curso" type="hidden" value="{{ inscripcion.curso }}">
+                                        <input name="rut" type="hidden" value="{{ inscripcion.rut }}">
+                                        <input name="fecha_nacimiento" type="hidden" value="{{ inscripcion.fecha_nacimiento|date:'Y-m-d' }}">
                                         <button class="btn" type="submit">Crear ficha</button>
                                     </form>
                                 </td>

@@ -206,12 +206,13 @@ class ProfileAdmin(admin.ModelAdmin):
         "full_name",
         "email",
         "role",
+        "rut",
         "access_status",
         "activated_course_name",
         "access_expires_at",
     )
     list_filter = ("role", "activated_course_name")
-    search_fields = ("user__username", "user__first_name", "user__last_name", "user__email")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "user__email", "rut")
 
     def full_name(self, obj):
         full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
@@ -255,6 +256,8 @@ class InscripcionAdmin(admin.ModelAdmin):
         "direccion",
         "correo",
         "telefono",
+        "rut",
+        "fecha_nacimiento",
         "user",
         "activation_code",
         "created_at",
@@ -263,6 +266,7 @@ class InscripcionAdmin(admin.ModelAdmin):
         "nombre",
         "correo",
         "telefono",
+        "rut",
         "curso",
         "comuna",
         "direccion",

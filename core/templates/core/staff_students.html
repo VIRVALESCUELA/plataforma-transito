@@ -10,6 +10,16 @@
         display: flex;
         justify-content: flex-start;
     }
+    .student-search-form {
+        display: flex;
+        gap: 0.65rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .student-search-form input {
+        min-width: min(100%, 320px);
+        flex: 1 1 320px;
+    }
     @media (max-width: 680px) {
         .student-audit-table-wrap {
             overflow: visible;
@@ -95,6 +105,23 @@
 </section>
 
 <section class="dashboard-section" style="margin-top: 1.5rem;">
+    <form class="student-search-form" method="get">
+        <input
+            type="search"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Buscar por nombre o correo"
+            aria-label="Buscar alumno por nombre o correo"
+        >
+        <button class="btn" type="submit">Buscar</button>
+        {% if search_query %}
+            <a class="btn btn-outline" href="{% url 'core_web:staff-students' %}">Limpiar</a>
+            <span class="meta" style="color:#455a64;">{{ filtered_students_count }} resultado(s)</span>
+        {% endif %}
+    </form>
+</section>
+
+<section class="dashboard-section" style="margin-top: 1rem;">
     {% if students %}
         <div class="student-audit-table-wrap">
             <table class="student-audit-table">

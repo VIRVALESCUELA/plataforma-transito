@@ -97,6 +97,7 @@ def send_inscripcion_notification_email(inscripcion):
         f"Direccion: {inscripcion.direccion or 'No especificada'}\n"
         f"Correo: {inscripcion.correo}\n"
         f"Telefono: {inscripcion.telefono}\n"
+        f"Fecha de nacimiento: {inscripcion.fecha_nacimiento.strftime('%d/%m/%Y') if inscripcion.fecha_nacimiento else 'No especificada'}\n"
         f"Curso: {curso}\n"
         f"ID solicitud: {inscripcion.pk}\n"
         f"Fecha: {timezone.localtime(inscripcion.created_at).strftime('%d/%m/%Y %H:%M')}\n"
